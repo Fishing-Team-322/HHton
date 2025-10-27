@@ -1,5 +1,8 @@
 //! Database connectivity and persistence utilities.
 
+pub mod migrations;
+pub mod repositories;
+
 use sqlx::postgres::PgPool;
 use tracing::info;
 

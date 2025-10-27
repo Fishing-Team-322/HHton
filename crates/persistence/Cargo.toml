@@ -6,4 +6,6 @@ edition.workspace = true
 [dependencies]
 anyhow.workspace = true
 tracing.workspace = true
-sqlx = { version = "0.7", default-features = false, features = ["runtime-tokio", "macros", "postgres"] }
+sqlx = { version = "0.7", default-features = false, features = ["runtime-tokio-rustls", "macros", "postgres", "migrate", "chrono"] }
+core-domain = { path = "../core-domain" }
+chrono = { version = "0.4", features = ["clock"] }

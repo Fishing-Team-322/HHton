@@ -1,0 +1,18 @@
+[workspace]
+members = [
+    "crates/core-domain",
+    "crates/repo-proof",
+    "crates/ratings",
+    "crates/persistence",
+    "crates/storage",
+    "crates/hooks",
+    "crates/search",
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+
+[workspace.dependencies]
+anyhow = "1.0"
+tracing = "0.1"

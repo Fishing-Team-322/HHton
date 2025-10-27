@@ -17,7 +17,7 @@ services:
         condition: service_started
     environment:
       RUST_LOG: info
-      SERVICE_BIN: hh-tonic-service
+      SERVICE_BIN: hackcore-server
       DATABASE_URL: postgres://hhton:hhton@postgres:5432/hhton
       PERSISTENCE__DATABASE__URL: postgres://hhton:hhton@postgres:5432/hhton
       PERSISTENCE__MIGRATIONS_DIR: /srv/app/migrations

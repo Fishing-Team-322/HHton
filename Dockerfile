@@ -67,7 +67,7 @@ EOS
 
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-ENV SERVICE_BIN=hh-tonic-service \
+ENV SERVICE_BIN=hackcore-server \
     PERSISTENCE__MIGRATIONS_DIR=/srv/app/migrations
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

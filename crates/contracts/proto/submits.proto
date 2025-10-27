@@ -8,9 +8,10 @@ service SubmitsService {
 }
 
 message SubmitSolutionRequest {
-  string participant_id = 1;
-  string event_id = 2;
-  string solution = 3;
+  string team_id = 1;
+  string hackathon_id = 2;
+  string summary = 3;
+  RepositoryBinding repository_binding = 4;
 }
 
 message SubmitSolutionResponse {
@@ -27,8 +28,25 @@ message GetSubmissionResponse {
 
 message Submission {
   string id = 1;
-  string participant_id = 2;
-  string event_id = 3;
-  int64 submitted_at = 4;
-  string status = 5;
+  string team_id = 2;
+  string hackathon_id = 3;
+  string summary = 4;
+  RepositoryBinding repository_binding = 5;
+  int64 created_at = 6;
+  repeated VerificationStatus verification_statuses = 7;
+  int64 submission_deadline = 8;
+}
+
+message RepositoryBinding {
+  string provider = 1;
+  string repository = 2;
+  string commit = 3;
+  bool is_private = 4;
+}
+
+message VerificationStatus {
+  string check = 1;
+  string status = 2;
+  string details = 3;
+  int64 checked_at = 4;
 }

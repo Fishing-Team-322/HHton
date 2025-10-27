@@ -2,8 +2,9 @@
 
 use std::collections::HashMap;
 
-use anyhow::{Context, Result};
-use chrono::NaiveDate;
+use anyhow::{anyhow, Context, Result};
+use chrono::{DateTime, NaiveDate, Utc};
+use contracts::rating::{EventOutcome as ProtoEventOutcome, EventScale as ProtoEventScale};
 
 /// Represents a user generated rating for a repository artifact.
 #[derive(Debug, Clone, PartialEq)]
@@ -129,6 +130,42 @@ impl EventOutcome {
             finished_at,
             team_size,
         })
+    }
+}
+
+impl TryFrom<ProtoEventScale> for EventScale {
+    type Error = anyhow::Error;
+
+    fn try_from(value: ProtoEventScale) -> Result<Self> {
+        match value {
+            ProtoEventScale::Unspecified => Err(anyhow!("event scale must be specified")),
+            ProtoEventScale::Local => Ok(EventScale::Local),
+            ProtoEventScale::Regional => Ok(EventScale::Regional),
+            ProtoEventScale::National => Ok(EventScale::National),
+            ProtoEventScale::Global => Ok(EventScale::Global),
+        }
+    }
+}
+
+impl TryFrom<ProtoEventOutcome> for EventOutcome {
+    type Error = anyhow::Error;
+
+    fn try_from(value: ProtoEventOutcome) -> Result<Self> {
+        let scale_enum = ProtoEventScale::try_from(value.scale)
+            .map_err(|_| anyhow!("unknown event scale value: {}", value.scale))?;
+        let scale = EventScale::try_from(scale_enum)?;
+
+        let finished_at = DateTime::<Utc>::from_timestamp(value.finished_at, 0)
+            .ok_or_else(|| anyhow!("invalid finished_at timestamp: {}", value.finished_at))?
+            .date_naive();
+
+        EventOutcome::new(
+            value.position,
+            value.total_participants,
+            scale,
+            finished_at,
+            value.team_size,
+        )
     }
 }
 
@@ -437,5 +474,31 @@ mod tests {
         assert!(team_profile.members.contains(&"alice".to_string()));
         assert!(team_profile.members.contains(&"bob".to_string()));
         assert!(team_profile.rating > 0.0);
+    }
+
+    #[test]
+    fn converts_proto_event_outcome_and_scores() {
+        let finished_at = NaiveDate::from_ymd_opt(2024, 6, 10)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap()
+            .and_utc()
+            .timestamp();
+
+        let proto = ProtoEventOutcome {
+            position: 2,
+            total_participants: 100,
+            scale: ProtoEventScale::National as i32,
+            finished_at,
+            team_size: 3,
+        };
+
+        let outcome = EventOutcome::try_from(proto).unwrap();
+        let factors = RatingFactors::default();
+        let reference_date = NaiveDate::from_ymd_opt(2024, 7, 1).unwrap();
+
+        let score = calculate_score(&outcome, &factors, reference_date).unwrap();
+
+        assert!(score > 0.0);
     }
 }

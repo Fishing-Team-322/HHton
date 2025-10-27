@@ -17,7 +17,7 @@ message GetRatingResponse {
 
 message UpdateRatingRequest {
   string participant_id = 1;
-  int32 delta = 2;
+  EventOutcome outcome = 2;
 }
 
 message UpdateRatingResponse {
@@ -28,4 +28,21 @@ message Rating {
   string participant_id = 1;
   int32 score = 2;
   int64 updated_at = 3;
+  double leaderboard_score = 4;
+}
+
+enum EventScale {
+  EVENT_SCALE_UNSPECIFIED = 0;
+  EVENT_SCALE_LOCAL = 1;
+  EVENT_SCALE_REGIONAL = 2;
+  EVENT_SCALE_NATIONAL = 3;
+  EVENT_SCALE_GLOBAL = 4;
+}
+
+message EventOutcome {
+  uint32 position = 1;
+  uint32 total_participants = 2;
+  EventScale scale = 3;
+  int64 finished_at = 4;
+  uint32 team_size = 5;
 }

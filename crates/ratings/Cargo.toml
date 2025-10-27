@@ -6,4 +6,5 @@ edition.workspace = true
 [dependencies]
 anyhow.workspace = true
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
+contracts = { path = "../contracts" }
 tracing.workspace = true

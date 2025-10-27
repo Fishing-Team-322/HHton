@@ -11,9 +11,7 @@ pub struct SearchQuery {
 impl SearchQuery {
     /// Parse free-form input into a sanitized search query.
     pub fn parse(input: &str) -> Result<Self> {
-        let term = input
-            .trim()
-            .to_lowercase();
+        let term = input.trim().to_lowercase();
 
         anyhow::ensure!(!term.is_empty(), "search term must not be empty");
         Ok(Self { term })
@@ -41,6 +39,8 @@ where
 {
     inputs
         .into_iter()
-        .map(|input| SearchQuery::parse(input).with_context(|| format!("invalid search query: {input}")))
+        .map(|input| {
+            SearchQuery::parse(input).with_context(|| format!("invalid search query: {input}"))
+        })
         .collect()
 }

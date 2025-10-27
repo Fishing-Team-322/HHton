@@ -8,6 +8,7 @@ members = [
     "crates/hooks",
     "crates/search",
     "crates/contracts",
+    "crates/hackcore-server",
 ]
 resolver = "2"
 

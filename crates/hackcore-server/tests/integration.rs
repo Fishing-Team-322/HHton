@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use anyhow::Result;
+use anyhow::{Error, Result};
 use async_trait::async_trait;
 use contracts::events::events_service_client::EventsServiceClient;
 use contracts::events::GetEventRequest;
@@ -21,9 +21,11 @@ use core_domain::user::{DisplayName, EmailAddress, User, UserProfile};
 use hackcore_server::persistence::PersistenceGateway;
 use hackcore_server::serve_unix;
 use hackcore_server::services::{RepoProofAdapter, SubmissionArtifacts};
+use repo_proof::RepoProofClient;
 use tempfile::tempdir;
 use tokio::sync::{Mutex, RwLock};
 use tokio::task::JoinHandle;
+use tokio_stream::wrappers::TcpListenerStream;
 use tonic::transport::{Channel, Endpoint};
 use tower::service_fn;
 
@@ -140,12 +142,15 @@ async fn seed_persistence(persistence: &Arc<InMemoryPersistence>) -> Result<()> 
     Ok(())
 }
 
-async fn start_server(
+async fn start_server<R>(
     persistence: Arc<InMemoryPersistence>,
     storage: Arc<MemoryStorage>,
-    repo_proof: Arc<MockRepoProof>,
+    repo_proof: Arc<R>,
     socket_path: PathBuf,
-) -> (JoinHandle<Result<()>>, tokio::sync::oneshot::Sender<()>) {
+) -> (JoinHandle<Result<()>>, tokio::sync::oneshot::Sender<()>)
+where
+    R: RepoProofAdapter + 'static,
+{
     let (tx, rx) = tokio::sync::oneshot::channel();
     let server = tokio::spawn(serve_unix(
         socket_path.clone(),
@@ -242,6 +247,10 @@ async fn server_serves_primary_rpcs() -> Result<()> {
         .expect("submission created");
     assert_eq!(submission.team_id, "team-1");
 
+    let invocations = repo_proof.invocations.lock().await;
+    assert_eq!(*invocations, 1);
+    drop(invocations);
+
     let stored = storage.calls.lock().await;
     assert_eq!(stored.len(), 1);
     drop(stored);
@@ -285,6 +294,72 @@ async fn server_serves_primary_rpcs() -> Result<()> {
 
     let _ = shutdown.send(());
     let _ = server.await?;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn submit_solution_succeeds_with_repo_proof_endpoint() -> Result<()> {
+    let persistence = Arc::new(InMemoryPersistence::default());
+    seed_persistence(&persistence).await?;
+    let storage = Arc::new(MemoryStorage::default());
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await?;
+    let repo_addr = listener.local_addr()?;
+    let (repo_shutdown_tx, repo_shutdown_rx) = tokio::sync::oneshot::channel();
+    let repo_server = tokio::spawn(async move {
+        let incoming = TcpListenerStream::new(listener);
+        tonic::transport::Server::builder()
+            .add_service(repo_proof::service())
+            .serve_with_incoming_shutdown(incoming, async move {
+                let _ = repo_shutdown_rx.await;
+            })
+            .await
+            .map_err(Error::new)
+    });
+
+    let channel = Channel::from_shared(format!("http://{}", repo_addr))?
+        .connect()
+        .await?;
+    let repo_proof = Arc::new(RepoProofClient::new(channel));
+
+    let dir = tempdir()?;
+    let socket_path = dir.path().join("hackcore.sock");
+
+    let (server, shutdown) = start_server(
+        persistence.clone(),
+        storage.clone(),
+        repo_proof,
+        socket_path.clone(),
+    )
+    .await;
+
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    let channel = connect(&socket_path).await?;
+    let mut submits = SubmitsServiceClient::new(channel);
+    let submission = submits
+        .submit_solution(SubmitSolutionRequest {
+            team_id: "team-1".into(),
+            hackathon_id: "hack-1".into(),
+            summary: "Great project".into(),
+            repository_binding: Some(RepositoryBinding {
+                provider: "github".into(),
+                repository: "org/repo".into(),
+                commit: "abc123".into(),
+                is_private: false,
+            }),
+        })
+        .await?
+        .into_inner()
+        .submission
+        .expect("submission created");
+    assert_eq!(submission.team_id, "team-1");
+
+    let _ = shutdown.send(());
+    let _ = server.await?;
+
+    let _ = repo_shutdown_tx.send(());
+    repo_server.await??;
 
     Ok(())
 }

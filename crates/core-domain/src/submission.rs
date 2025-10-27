@@ -14,6 +14,7 @@ pub struct Submission {
     team_id: EntityId,
     hackathon_id: EntityId,
     summary: SubmissionSummary,
+    repository_binding: Option<RepositoryBinding>,
     created_at: SystemTime,
 }
 
@@ -23,6 +24,7 @@ impl Submission {
         team_id: EntityId,
         hackathon_id: EntityId,
         summary: SubmissionSummary,
+        repository_binding: Option<RepositoryBinding>,
         created_at: SystemTime,
     ) -> Result<Self> {
         let now = SystemTime::now();
@@ -32,6 +34,7 @@ impl Submission {
             team_id,
             hackathon_id,
             summary,
+            repository_binding,
             created_at,
         })
     }
@@ -48,6 +51,10 @@ impl Submission {
         &self.summary
     }
 
+    pub fn repository_binding(&self) -> Option<&RepositoryBinding> {
+        self.repository_binding.as_ref()
+    }
+
     pub fn created_at(&self) -> SystemTime {
         self.created_at
     }
@@ -56,6 +63,54 @@ impl Submission {
 impl AggregateRoot for Submission {
     fn id(&self) -> &str {
         &self.id.0
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RepositoryBinding {
+    provider: String,
+    repository: String,
+    reference: String,
+    is_private: bool,
+}
+
+impl RepositoryBinding {
+    pub fn new(
+        provider: impl Into<String>,
+        repository: impl Into<String>,
+        reference: impl Into<String>,
+        is_private: bool,
+    ) -> Result<Self> {
+        let provider = provider.into();
+        let repository = repository.into();
+        let reference = reference.into();
+
+        validate_invariant(!provider.trim().is_empty())?;
+        validate_invariant(!repository.trim().is_empty())?;
+        validate_invariant(!reference.trim().is_empty())?;
+
+        Ok(Self {
+            provider,
+            repository,
+            reference,
+            is_private,
+        })
+    }
+
+    pub fn provider(&self) -> &str {
+        &self.provider
+    }
+
+    pub fn repository(&self) -> &str {
+        &self.repository
+    }
+
+    pub fn reference(&self) -> &str {
+        &self.reference
+    }
+
+    pub fn is_private(&self) -> bool {
+        self.is_private
     }
 }
 
@@ -102,8 +157,37 @@ mod tests {
             EntityId("team-1".into()),
             EntityId("hack-1".into()),
             summary,
+            None,
             future,
         );
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn repository_binding_requires_all_fields() {
+        assert!(RepositoryBinding::new("", "owner/repo", "main", false).is_err());
+        assert!(RepositoryBinding::new("github", "", "main", false).is_err());
+        assert!(RepositoryBinding::new("github", "owner/repo", "", false).is_err());
+    }
+
+    #[test]
+    fn submission_can_expose_repository_binding() {
+        let summary = SubmissionSummary::new("Great project").unwrap();
+        let binding = RepositoryBinding::new("github", "owner/repo", "abc123", true).unwrap();
+        let submission = Submission::new(
+            EntityId("submission-1".into()),
+            EntityId("team-1".into()),
+            EntityId("hack-1".into()),
+            summary,
+            Some(binding.clone()),
+            SystemTime::now(),
+        )
+        .unwrap();
+
+        let extracted = submission
+            .repository_binding()
+            .expect("binding should exist");
+        assert_eq!(extracted, &binding);
+        assert!(extracted.is_private());
     }
 }

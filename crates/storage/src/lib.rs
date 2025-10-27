@@ -14,6 +14,8 @@ pub struct SnapshotMetadata {
     pub submission_id: String,
     pub archive_size: u64,
     pub uploaded_at: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub commit_sha: Option<String>,
 }
 
 impl SnapshotMetadata {
@@ -23,12 +25,14 @@ impl SnapshotMetadata {
         submission_id: impl Into<String>,
         archive_size: u64,
         uploaded_at: u64,
+        commit_sha: Option<impl Into<String>>,
     ) -> Self {
         Self {
             event_id: event_id.into(),
             submission_id: submission_id.into(),
             archive_size,
             uploaded_at,
+            commit_sha: commit_sha.map(Into::into),
         }
     }
 }
@@ -111,6 +115,7 @@ impl ObjectStorage {
             submission_id,
             archive_bytes.len() as u64,
             uploaded_at,
+            None::<String>,
         );
 
         tracing::debug!(bucket = %self.bucket, %archive_key, %metadata_key, "uploading snapshot archive");

@@ -4,8 +4,9 @@ use anyhow::Result;
 use chrono::{DateTime, Utc};
 use core_domain::{
     model::{AggregateRoot, EntityId},
-    submission::{Submission, SubmissionSummary},
+    submission::{RepositoryBinding, Submission, SubmissionSummary},
 };
+use serde_json::Value;
 use sqlx::{FromRow, PgPool};
 
 #[derive(Debug, Clone, FromRow)]
@@ -14,16 +15,31 @@ pub struct SubmissionRecord {
     pub team_id: String,
     pub hackathon_id: String,
     pub summary: String,
+    pub provider: Option<String>,
+    pub repository: Option<String>,
+    pub commit_sha: Option<String>,
+    pub is_private: bool,
+    pub proof_status: Option<String>,
+    pub metadata_json: Option<Value>,
     pub created_at: DateTime<Utc>,
 }
 
 impl From<&Submission> for SubmissionRecord {
     fn from(submission: &Submission) -> Self {
+        let repository_binding = submission.repository_binding();
         Self {
             id: submission.id().to_owned(),
             team_id: submission.team_id().0.clone(),
             hackathon_id: submission.hackathon_id().0.clone(),
             summary: submission.summary().value().to_owned(),
+            provider: repository_binding.map(|binding| binding.provider().to_owned()),
+            repository: repository_binding.map(|binding| binding.repository().to_owned()),
+            commit_sha: repository_binding.map(|binding| binding.reference().to_owned()),
+            is_private: repository_binding
+                .map(|binding| binding.is_private())
+                .unwrap_or(false),
+            proof_status: None,
+            metadata_json: None,
             created_at: DateTime::<Utc>::from(submission.created_at()),
         }
     }
@@ -34,11 +50,19 @@ impl TryFrom<SubmissionRecord> for Submission {
 
     fn try_from(value: SubmissionRecord) -> Result<Self> {
         let summary = SubmissionSummary::new(value.summary)?;
+        let repository_binding =
+            match (value.provider, value.repository, value.commit_sha) {
+                (Some(provider), Some(repository), Some(commit_sha)) => Some(
+                    RepositoryBinding::new(provider, repository, commit_sha, value.is_private)?,
+                ),
+                _ => None,
+            };
         Submission::new(
             EntityId(value.id),
             EntityId(value.team_id),
             EntityId(value.hackathon_id),
             summary,
+            repository_binding,
             SystemTime::from(value.created_at),
         )
     }
@@ -58,18 +82,42 @@ impl<'a> SubmissionRepository<'a> {
     pub async fn insert(&self, submission: &Submission) -> Result<()> {
         let record = SubmissionRecord::from(submission);
         sqlx::query(
-            r#"INSERT INTO submissions (id, team_id, hackathon_id, summary, created_at)
-            VALUES ($1, $2, $3, $4, $5)
+            r#"INSERT INTO submissions (
+                id,
+                team_id,
+                hackathon_id,
+                summary,
+                provider,
+                repository,
+                commit_sha,
+                is_private,
+                proof_status,
+                metadata_json,
+                created_at
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
             ON CONFLICT (id) DO UPDATE SET
                 team_id = EXCLUDED.team_id,
                 hackathon_id = EXCLUDED.hackathon_id,
                 summary = EXCLUDED.summary,
+                provider = EXCLUDED.provider,
+                repository = EXCLUDED.repository,
+                commit_sha = EXCLUDED.commit_sha,
+                is_private = EXCLUDED.is_private,
+                proof_status = EXCLUDED.proof_status,
+                metadata_json = EXCLUDED.metadata_json,
                 created_at = EXCLUDED.created_at"#,
         )
         .bind(&record.id)
         .bind(&record.team_id)
         .bind(&record.hackathon_id)
         .bind(&record.summary)
+        .bind(&record.provider)
+        .bind(&record.repository)
+        .bind(&record.commit_sha)
+        .bind(record.is_private)
+        .bind(&record.proof_status)
+        .bind(&record.metadata_json)
         .bind(record.created_at)
         .execute(self.pool)
         .await?;
@@ -79,7 +127,7 @@ impl<'a> SubmissionRepository<'a> {
 
     pub async fn find_by_id(&self, id: &str) -> Result<Option<Submission>> {
         let record = sqlx::query_as::<_, SubmissionRecord>(
-            "SELECT id, team_id, hackathon_id, summary, created_at FROM submissions WHERE id = $1",
+            "SELECT id, team_id, hackathon_id, summary, provider, repository, commit_sha, is_private, proof_status, metadata_json, created_at FROM submissions WHERE id = $1",
         )
         .bind(id)
         .fetch_optional(self.pool)
@@ -144,6 +192,10 @@ mod tests {
             EntityId("team-1".into()),
             EntityId("hack-1".into()),
             SubmissionSummary::new("Great project").unwrap(),
+            Some(
+                RepositoryBinding::new("github", "owner/repo", "abc123", true)
+                    .expect("binding should be valid"),
+            ),
             SystemTime::now(),
         )
         .unwrap();
@@ -159,6 +211,13 @@ mod tests {
             .expect("submission should be present");
 
         assert_eq!(loaded.summary().value(), "Great project");
+        let binding = loaded
+            .repository_binding()
+            .expect("binding should roundtrip");
+        assert_eq!(binding.provider(), "github");
+        assert_eq!(binding.repository(), "owner/repo");
+        assert_eq!(binding.reference(), "abc123");
+        assert!(binding.is_private());
         Ok(())
     }
 }

@@ -15,9 +15,9 @@ pub struct SubmissionRecord {
     pub team_id: String,
     pub hackathon_id: String,
     pub summary: String,
-    pub provider: Option<String>,
-    pub repository: Option<String>,
-    pub commit_sha: Option<String>,
+    pub provider: String,
+    pub repository: String,
+    pub commit_sha: String,
     pub is_private: bool,
     pub proof_status: Option<String>,
     pub metadata_json: Option<Value>,
@@ -32,12 +32,10 @@ impl From<&Submission> for SubmissionRecord {
             team_id: submission.team_id().0.clone(),
             hackathon_id: submission.hackathon_id().0.clone(),
             summary: submission.summary().value().to_owned(),
-            provider: repository_binding.map(|binding| binding.provider().to_owned()),
-            repository: repository_binding.map(|binding| binding.repository().to_owned()),
-            commit_sha: repository_binding.map(|binding| binding.reference().to_owned()),
-            is_private: repository_binding
-                .map(|binding| binding.is_private())
-                .unwrap_or(false),
+            provider: repository_binding.provider().to_owned(),
+            repository: repository_binding.repository().to_owned(),
+            commit_sha: repository_binding.reference().to_owned(),
+            is_private: repository_binding.is_private(),
             proof_status: None,
             metadata_json: None,
             created_at: DateTime::<Utc>::from(submission.created_at()),
@@ -50,19 +48,17 @@ impl TryFrom<SubmissionRecord> for Submission {
 
     fn try_from(value: SubmissionRecord) -> Result<Self> {
         let summary = SubmissionSummary::new(value.summary)?;
-        let repository_binding =
-            match (value.provider, value.repository, value.commit_sha) {
-                (Some(provider), Some(repository), Some(commit_sha)) => Some(
-                    RepositoryBinding::new(provider, repository, commit_sha, value.is_private)?,
-                ),
-                _ => None,
-            };
         Submission::new(
             EntityId(value.id),
             EntityId(value.team_id),
             EntityId(value.hackathon_id),
             summary,
-            repository_binding,
+            RepositoryBinding::new(
+                value.provider,
+                value.repository,
+                value.commit_sha,
+                value.is_private,
+            )?,
             SystemTime::from(value.created_at),
         )
     }
@@ -192,10 +188,8 @@ mod tests {
             EntityId("team-1".into()),
             EntityId("hack-1".into()),
             SubmissionSummary::new("Great project").unwrap(),
-            Some(
-                RepositoryBinding::new("github", "owner/repo", "abc123", true)
-                    .expect("binding should be valid"),
-            ),
+            RepositoryBinding::new("github", "owner/repo", "abc123", true)
+                .expect("binding should be valid"),
             SystemTime::now(),
         )
         .unwrap();
@@ -211,9 +205,7 @@ mod tests {
             .expect("submission should be present");
 
         assert_eq!(loaded.summary().value(), "Great project");
-        let binding = loaded
-            .repository_binding()
-            .expect("binding should roundtrip");
+        let binding = loaded.repository_binding();
         assert_eq!(binding.provider(), "github");
         assert_eq!(binding.repository(), "owner/repo");
         assert_eq!(binding.reference(), "abc123");

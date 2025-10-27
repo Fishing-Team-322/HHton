@@ -26,6 +26,7 @@ mod tests {
     use super::events::Event;
     use super::participants::participants_service_client::ParticipantsServiceClient;
     use super::rating::rating_service_client::RatingServiceClient;
+    use super::rating::{EventOutcome, EventScale, UpdateRatingRequest};
     use super::repo_proof::repo_proof_service_client::RepoProofServiceClient;
     use super::submits::submits_service_client::SubmitsServiceClient;
     use super::submits::{
@@ -42,6 +43,24 @@ mod tests {
         assert_client::<EventsServiceClient<Channel>>();
         assert_client::<SubmitsServiceClient<Channel>>();
         assert_client::<RatingServiceClient<Channel>>();
+    }
+
+    #[test]
+    fn rating_contract_supports_event_outcome() {
+        let outcome = EventOutcome {
+            position: 1,
+            total_participants: 120,
+            scale: EventScale::Global as i32,
+            finished_at: 1_700_000_000,
+            team_size: 4,
+        };
+
+        let request = UpdateRatingRequest {
+            participant_id: "participant-42".to_string(),
+            outcome: Some(outcome.clone()),
+        };
+
+        assert_eq!(request.outcome.unwrap().position, outcome.position);
     }
 
     #[test]

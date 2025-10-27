@@ -13,3 +13,12 @@ export S3_BUCKET=hhton-dev
 
 Point the value at the correct bucket for your environment (for local
 development this is typically the MinIO bucket created by the stack).
+
+The application also depends on a repository-proof gRPC endpoint. The Docker
+Compose stack launches a companion `repo-proof` service that listens on
+`0.0.0.0:50060`. When running the server outside of Compose make sure the
+`REPO_PROOF_ENDPOINT` environment variable points at a reachable gRPC address:
+
+```bash
+export REPO_PROOF_ENDPOINT=http://127.0.0.1:50060
+```

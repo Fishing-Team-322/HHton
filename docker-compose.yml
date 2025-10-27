@@ -15,9 +15,12 @@ services:
         condition: service_completed_successfully
       redis:
         condition: service_started
+      repo-proof:
+        condition: service_started
     environment:
       RUST_LOG: info
       SERVICE_BIN: hackcore-server
+      REPO_PROOF_ENDPOINT: http://repo-proof:50060
       DATABASE_URL: postgres://hhton:hhton@postgres:5432/hhton
       PERSISTENCE__DATABASE__URL: postgres://hhton:hhton@postgres:5432/hhton
       PERSISTENCE__MIGRATIONS_DIR: /srv/app/migrations
@@ -86,6 +89,15 @@ services:
     command: >-
       mc alias set local http://minio:9000 hhton hhtonsecret &&
       mc mb --ignore-existing local/hhton-dev
+
+  repo-proof:
+    image: hhton/service:latest
+    environment:
+      SERVICE_BIN: repo-proof-server
+      RUST_LOG: info
+      REPO_PROOF_LISTEN_ADDR: 0.0.0.0:50060
+    expose:
+      - "50060"
 
 volumes:
   postgres-data:

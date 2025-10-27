@@ -31,4 +31,7 @@ message Event {
   string description = 3;
   int64 start_time = 4;
   int64 end_time = 5;
+  int64 registration_deadline = 6;
+  int64 submission_deadline = 7;
+  uint32 team_size_limit = 8;
 }

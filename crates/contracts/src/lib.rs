@@ -23,6 +23,7 @@ pub mod repo_proof {
 #[cfg(test)]
 mod tests {
     use super::events::events_service_client::EventsServiceClient;
+    use super::events::Event;
     use super::participants::participants_service_client::ParticipantsServiceClient;
     use super::rating::rating_service_client::RatingServiceClient;
     use super::repo_proof::repo_proof_service_client::RepoProofServiceClient;
@@ -83,5 +84,22 @@ mod tests {
             .verification_statuses
             .iter()
             .any(|status| status.check == "repo_proof"));
+    }
+
+    #[test]
+    fn events_contract_includes_hackathon_schedule() {
+        let event = Event {
+            id: "hack-42".to_string(),
+            name: "Hackathon".to_string(),
+            description: "Build the future".to_string(),
+            start_time: 1_700_000_000,
+            end_time: 1_700_086_400,
+            registration_deadline: 1_699_999_900,
+            submission_deadline: 1_700_086_300,
+            team_size_limit: 5,
+        };
+
+        assert!(event.registration_deadline < event.submission_deadline);
+        assert_eq!(event.team_size_limit, 5);
     }
 }

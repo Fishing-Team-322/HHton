@@ -14,7 +14,7 @@ pub struct Submission {
     team_id: EntityId,
     hackathon_id: EntityId,
     summary: SubmissionSummary,
-    repository_binding: Option<RepositoryBinding>,
+    repository_binding: RepositoryBinding,
     created_at: SystemTime,
 }
 
@@ -24,7 +24,7 @@ impl Submission {
         team_id: EntityId,
         hackathon_id: EntityId,
         summary: SubmissionSummary,
-        repository_binding: Option<RepositoryBinding>,
+        repository_binding: RepositoryBinding,
         created_at: SystemTime,
     ) -> Result<Self> {
         let now = SystemTime::now();
@@ -51,8 +51,8 @@ impl Submission {
         &self.summary
     }
 
-    pub fn repository_binding(&self) -> Option<&RepositoryBinding> {
-        self.repository_binding.as_ref()
+    pub fn repository_binding(&self) -> &RepositoryBinding {
+        &self.repository_binding
     }
 
     pub fn created_at(&self) -> SystemTime {
@@ -152,12 +152,13 @@ mod tests {
     fn creation_time_cannot_be_in_the_future() {
         let summary = SubmissionSummary::new("Great project").unwrap();
         let future = SystemTime::now() + Duration::from_secs(60);
+        let binding = RepositoryBinding::new("github", "owner/repo", "abc123", false).unwrap();
         let result = Submission::new(
             EntityId("submission-1".into()),
             EntityId("team-1".into()),
             EntityId("hack-1".into()),
             summary,
-            None,
+            binding,
             future,
         );
         assert!(result.is_err());
@@ -179,14 +180,12 @@ mod tests {
             EntityId("team-1".into()),
             EntityId("hack-1".into()),
             summary,
-            Some(binding.clone()),
+            binding.clone(),
             SystemTime::now(),
         )
         .unwrap();
 
-        let extracted = submission
-            .repository_binding()
-            .expect("binding should exist");
+        let extracted = submission.repository_binding();
         assert_eq!(extracted, &binding);
         assert!(extracted.is_private());
     }

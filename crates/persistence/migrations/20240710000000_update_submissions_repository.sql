@@ -5,3 +5,8 @@ ALTER TABLE submissions
     ADD COLUMN IF NOT EXISTS is_private BOOLEAN NOT NULL DEFAULT FALSE,
     ADD COLUMN IF NOT EXISTS proof_status TEXT,
     ADD COLUMN IF NOT EXISTS metadata_json JSONB;
+
+ALTER TABLE submissions
+    ALTER COLUMN provider SET NOT NULL,
+    ALTER COLUMN repository SET NOT NULL,
+    ALTER COLUMN commit_sha SET NOT NULL;

@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package hh.contracts.events.v1;
+
+service EventsService {
+  rpc GetEvent(GetEventRequest) returns (GetEventResponse);
+  rpc ListEvents(ListEventsRequest) returns (ListEventsResponse);
+}
+
+message GetEventRequest {
+  string event_id = 1;
+}
+
+message GetEventResponse {
+  Event event = 1;
+}
+
+message ListEventsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+
+message ListEventsResponse {
+  repeated Event events = 1;
+  string next_page_token = 2;
+}
+
+message Event {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  int64 start_time = 4;
+  int64 end_time = 5;
+}

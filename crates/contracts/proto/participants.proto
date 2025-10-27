@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package hh.contracts.participants.v1;
+
+service ParticipantsService {
+  rpc GetParticipant(GetParticipantRequest) returns (GetParticipantResponse);
+  rpc ListParticipants(ListParticipantsRequest) returns (ListParticipantsResponse);
+}
+
+message GetParticipantRequest {
+  string participant_id = 1;
+}
+
+message GetParticipantResponse {
+  Participant participant = 1;
+}
+
+message ListParticipantsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+
+message ListParticipantsResponse {
+  repeated Participant participants = 1;
+  string next_page_token = 2;
+}
+
+message Participant {
+  string id = 1;
+  string display_name = 2;
+  string email = 3;
+}

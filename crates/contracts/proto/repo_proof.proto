@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package hh.contracts.repo_proof.v1;
+
+service RepoProofService {
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  string status = 1;
+}

@@ -2,12 +2,39 @@ syntax = "proto3";
 
 package hh.contracts.repo_proof.v1;
 
+import "google/protobuf/struct.proto";
+
 service RepoProofService {
   rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+  rpc VerifyBinding(VerifyBindingRequest) returns (VerifyBindingResponse);
 }
 
 message HealthCheckRequest {}
 
 message HealthCheckResponse {
   string status = 1;
+}
+
+message VerifyBindingRequest {
+  string provider = 1;
+  string repository = 2;
+  string commit = 3;
+  bool is_private = 4;
+}
+
+message VerifyBindingResponse {
+  VerificationVerdict verdict = 1;
+}
+
+message VerificationVerdict {
+  enum Outcome {
+    OUTCOME_UNSPECIFIED = 0;
+    OUTCOME_ACCEPTED = 1;
+    OUTCOME_REJECTED = 2;
+  }
+
+  Outcome outcome = 1;
+  string reason = 2;
+  google.protobuf.Struct proof = 3;
+  int64 checked_at = 4;
 }

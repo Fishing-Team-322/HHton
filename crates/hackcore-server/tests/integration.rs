@@ -11,6 +11,9 @@ use contracts::participants::participants_service_client::ParticipantsServiceCli
 use contracts::participants::{GetParticipantRequest, ListParticipantsRequest};
 use contracts::rating::rating_service_client::RatingServiceClient;
 use contracts::rating::{EventOutcome, EventScale, GetRatingRequest, UpdateRatingRequest};
+use contracts::repo_proof::{
+    verification_verdict::Outcome as RepoProofOutcome, VerificationVerdict, VerifyBindingResponse,
+};
 use contracts::submits::submits_service_client::SubmitsServiceClient;
 use contracts::submits::{GetSubmissionRequest, RepositoryBinding, SubmitSolutionRequest};
 use core_domain::hackathon::{Hackathon, HackathonName, TeamSizeLimit};
@@ -98,16 +101,63 @@ impl SubmissionArtifacts for MemoryStorage {
     }
 }
 
-#[derive(Default)]
 struct MockRepoProof {
-    invocations: Mutex<u32>,
+    health_checks: Mutex<u32>,
+    verifications: Mutex<u32>,
+    response: VerifyBindingResponse,
+}
+
+impl Default for MockRepoProof {
+    fn default() -> Self {
+        Self::accepting()
+    }
+}
+
+impl MockRepoProof {
+    fn accepting() -> Self {
+        Self::with_outcome(RepoProofOutcome::Accepted, "repository binding verified")
+    }
+
+    fn rejecting(reason: &str) -> Self {
+        Self::with_outcome(RepoProofOutcome::Rejected, reason)
+    }
+
+    fn with_outcome(outcome: RepoProofOutcome, reason: &str) -> Self {
+        let verdict = VerificationVerdict {
+            outcome: outcome as i32,
+            reason: reason.to_string(),
+            proof: None,
+            checked_at: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map(|duration| duration.as_secs() as i64)
+                .unwrap_or_default(),
+        };
+        Self {
+            health_checks: Mutex::new(0),
+            verifications: Mutex::new(0),
+            response: VerifyBindingResponse {
+                verdict: Some(verdict),
+            },
+        }
+    }
 }
 
 #[async_trait]
 impl RepoProofAdapter for MockRepoProof {
     async fn health_check(&self) -> Result<()> {
-        *self.invocations.lock().await += 1;
+        *self.health_checks.lock().await += 1;
         Ok(())
+    }
+
+    async fn verify_binding(
+        &self,
+        _provider: &str,
+        _repository: &str,
+        _commit: &str,
+        _is_private: bool,
+    ) -> Result<VerifyBindingResponse> {
+        *self.verifications.lock().await += 1;
+        Ok(self.response.clone())
     }
 }
 
@@ -255,10 +305,16 @@ async fn server_serves_primary_rpcs() -> Result<()> {
         .submission
         .expect("submission created");
     assert_eq!(submission.team_id, "team-1");
+    assert_eq!(submission.verification_statuses.len(), 1);
+    assert_eq!(submission.verification_statuses.len(), 1);
 
-    let invocations = repo_proof.invocations.lock().await;
-    assert_eq!(*invocations, 1);
-    drop(invocations);
+    let health_checks = repo_proof.health_checks.lock().await;
+    assert_eq!(*health_checks, 1);
+    drop(health_checks);
+
+    let verifications = repo_proof.verifications.lock().await;
+    assert_eq!(*verifications, 1);
+    drop(verifications);
 
     let stored = storage.calls.lock().await;
     assert_eq!(stored.len(), 1);
@@ -277,6 +333,10 @@ async fn server_serves_primary_rpcs() -> Result<()> {
         .submission
         .expect("submission fetched");
     assert_eq!(fetched.id, submission.id);
+    assert_eq!(fetched.verification_statuses.len(), 1);
+    let status = &fetched.verification_statuses[0];
+    assert_eq!(status.check, "repo_proof");
+    assert_eq!(status.status, "accepted");
 
     let mut ratings = RatingServiceClient::new(channel.clone());
     ratings
@@ -373,6 +433,68 @@ async fn submit_solution_succeeds_with_repo_proof_endpoint() -> Result<()> {
 
     let _ = repo_shutdown_tx.send(());
     repo_server.await??;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn submit_solution_fails_when_repo_proof_rejects() -> Result<()> {
+    let persistence = Arc::new(InMemoryPersistence::default());
+    seed_persistence(&persistence).await?;
+    let storage = Arc::new(MemoryStorage::default());
+    let repo_proof = Arc::new(MockRepoProof::rejecting("commit not reachable"));
+
+    let dir = tempdir()?;
+    let socket_path = dir.path().join("hackcore.sock");
+
+    let (server, shutdown) = start_server(
+        persistence.clone(),
+        storage.clone(),
+        repo_proof.clone(),
+        socket_path.clone(),
+    )
+    .await;
+
+    tokio::time::sleep(Duration::from_millis(100)).await;
+
+    let channel = connect(&socket_path).await?;
+    let mut submits = SubmitsServiceClient::new(channel);
+
+    let err = submits
+        .submit_solution(SubmitSolutionRequest {
+            team_id: "team-1".into(),
+            hackathon_id: "hack-1".into(),
+            summary: "Great project".into(),
+            repository_binding: Some(RepositoryBinding {
+                provider: "github".into(),
+                repository: "org/repo".into(),
+                commit: "abc123".into(),
+                is_private: false,
+            }),
+        })
+        .await
+        .expect_err("submission should be rejected");
+    assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+    assert!(err.message().contains("commit not reachable"));
+
+    let stored = persistence.submissions.read().await;
+    assert!(stored.is_empty());
+    drop(stored);
+
+    let health_checks = repo_proof.health_checks.lock().await;
+    assert_eq!(*health_checks, 0);
+    drop(health_checks);
+
+    let verifications = repo_proof.verifications.lock().await;
+    assert_eq!(*verifications, 1);
+    drop(verifications);
+
+    let artifacts = storage.calls.lock().await;
+    assert!(artifacts.is_empty());
+    drop(artifacts);
+
+    let _ = shutdown.send(());
+    let _ = server.await?;
 
     Ok(())
 }

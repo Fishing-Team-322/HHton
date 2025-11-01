@@ -1,10 +1,12 @@
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use core_domain::{
     model::{AggregateRoot, EntityId},
-    submission::{RepositoryBinding, Submission, SubmissionSummary},
+    submission::{
+        RepositoryBinding, Submission, SubmissionSummary, VerificationOutcome, VerificationResult,
+    },
 };
 use serde_json::Value;
 use sqlx::{FromRow, PgPool};
@@ -27,6 +29,26 @@ pub struct SubmissionRecord {
 impl From<&Submission> for SubmissionRecord {
     fn from(submission: &Submission) -> Self {
         let repository_binding = submission.repository_binding();
+        let (proof_status, metadata_json) = submission
+            .verification()
+            .map(|verification| {
+                let status = verification.outcome().as_str().to_string();
+                let mut metadata = serde_json::Map::new();
+                if let Some(reason) = verification.reason() {
+                    metadata.insert("reason".to_string(), Value::String(reason.to_string()));
+                }
+                let checked_at = verification
+                    .checked_at()
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .map(|duration| duration.as_secs() as i64)
+                    .unwrap_or_default();
+                metadata.insert("checked_at".to_string(), Value::Number(checked_at.into()));
+                if let Some(proof) = verification.proof() {
+                    metadata.insert("proof".to_string(), proof.clone());
+                }
+                (Some(status), Some(Value::Object(metadata)))
+            })
+            .unwrap_or((None, None));
         Self {
             id: submission.id().to_owned(),
             team_id: submission.team_id().0.clone(),
@@ -36,8 +58,8 @@ impl From<&Submission> for SubmissionRecord {
             repository: repository_binding.repository().to_owned(),
             commit_sha: repository_binding.reference().to_owned(),
             is_private: repository_binding.is_private(),
-            proof_status: None,
-            metadata_json: None,
+            proof_status,
+            metadata_json,
             created_at: DateTime::<Utc>::from(submission.created_at()),
         }
     }
@@ -61,7 +83,48 @@ impl TryFrom<SubmissionRecord> for Submission {
             )?,
             SystemTime::from(value.created_at),
         )
+        .map(|mut submission| {
+            if let Some(status) = value
+                .proof_status
+                .as_deref()
+                .and_then(VerificationOutcome::from_str)
+            {
+                let metadata = value.metadata_json.unwrap_or(Value::Null);
+                let (reason, checked_at, proof) = extract_verification_metadata(metadata);
+                submission
+                    .set_verification(VerificationResult::new(status, reason, checked_at, proof));
+            }
+            submission
+        })
     }
+}
+
+fn extract_verification_metadata(metadata: Value) -> (Option<String>, SystemTime, Option<Value>) {
+    let mut reason = None;
+    let mut checked_at = SystemTime::UNIX_EPOCH;
+    let mut proof = None;
+
+    if let Value::Object(map) = metadata {
+        if let Some(Value::String(value)) = map.get("reason") {
+            reason = Some(value.clone());
+        }
+
+        if let Some(Value::Number(number)) = map.get("checked_at") {
+            if let Some(secs) = number.as_i64() {
+                if secs >= 0 {
+                    checked_at = UNIX_EPOCH + Duration::from_secs(secs as u64);
+                } else {
+                    checked_at = UNIX_EPOCH - Duration::from_secs(secs.unsigned_abs());
+                }
+            }
+        }
+
+        if let Some(value) = map.get("proof") {
+            proof = Some(value.clone());
+        }
+    }
+
+    (reason, checked_at, proof)
 }
 
 /// Data access facade for submission aggregates.

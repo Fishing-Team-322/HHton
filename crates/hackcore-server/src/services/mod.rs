@@ -7,7 +7,12 @@ use async_trait::async_trait;
 
 #[async_trait]
 pub trait SubmissionArtifacts: Send + Sync {
-    async fn store_placeholder(&self, key: &str, bytes: &[u8]) -> anyhow::Result<()>;
+    async fn store_placeholder(
+        &self,
+        event_id: &str,
+        submission_id: &str,
+        bytes: &[u8],
+    ) -> anyhow::Result<()>;
 }
 
 #[async_trait]
@@ -17,8 +22,15 @@ pub trait RepoProofAdapter: Send + Sync {
 
 #[async_trait]
 impl SubmissionArtifacts for storage::ObjectStorage {
-    async fn store_placeholder(&self, key: &str, bytes: &[u8]) -> anyhow::Result<()> {
-        self.put_placeholder(key, bytes).await
+    async fn store_placeholder(
+        &self,
+        event_id: &str,
+        submission_id: &str,
+        bytes: &[u8],
+    ) -> anyhow::Result<()> {
+        const SUMMARY_ARTIFACT: &str = "summary.txt";
+        self.put_placeholder(event_id, submission_id, SUMMARY_ARTIFACT, bytes, None)
+            .await
     }
 }
 

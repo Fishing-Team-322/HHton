@@ -78,13 +78,22 @@ impl PersistenceGateway for InMemoryPersistence {
 
 #[derive(Default)]
 struct MemoryStorage {
-    calls: Mutex<Vec<String>>,
+    calls: Mutex<Vec<(String, String, Vec<u8>)>>,
 }
 
 #[async_trait]
 impl SubmissionArtifacts for MemoryStorage {
-    async fn store_placeholder(&self, key: &str, _bytes: &[u8]) -> Result<()> {
-        self.calls.lock().await.push(key.to_string());
+    async fn store_placeholder(
+        &self,
+        event_id: &str,
+        submission_id: &str,
+        bytes: &[u8],
+    ) -> Result<()> {
+        self.calls.lock().await.push((
+            event_id.to_string(),
+            submission_id.to_string(),
+            bytes.to_vec(),
+        ));
         Ok(())
     }
 }
@@ -253,6 +262,10 @@ async fn server_serves_primary_rpcs() -> Result<()> {
 
     let stored = storage.calls.lock().await;
     assert_eq!(stored.len(), 1);
+    let (event_id, submission_id, bytes) = &stored[0];
+    assert_eq!(event_id, "hack-1");
+    assert_eq!(submission_id, &submission.id);
+    assert_eq!(bytes, b"Great project");
     drop(stored);
 
     let fetched = submits

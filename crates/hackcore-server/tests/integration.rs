@@ -173,17 +173,6 @@ async fn seed_persistence(persistence: &Arc<InMemoryPersistence>) -> Result<()> 
         .await
         .insert(user.id().to_string(), user.clone());
 
-    let team = Team::new(
-        EntityId("team-1".into()),
-        TeamName::new("Alpha")?,
-        vec![EntityId("user-1".into())],
-    )?;
-    persistence
-        .teams
-        .write()
-        .await
-        .insert(team.id().to_string(), team);
-
     let now = SystemTime::now();
     let hackathon = Hackathon::new(
         EntityId("hack-1".into()),
@@ -197,6 +186,18 @@ async fn seed_persistence(persistence: &Arc<InMemoryPersistence>) -> Result<()> 
         .write()
         .await
         .insert(hackathon.id().to_string(), hackathon);
+
+    let team = Team::new(
+        EntityId("team-1".into()),
+        EntityId("hack-1".into()),
+        TeamName::new("Alpha")?,
+        vec![EntityId("user-1".into())],
+    )?;
+    persistence
+        .teams
+        .write()
+        .await
+        .insert(team.id().to_string(), team);
 
     Ok(())
 }
@@ -492,6 +493,85 @@ async fn submit_solution_fails_when_repo_proof_rejects() -> Result<()> {
     let artifacts = storage.calls.lock().await;
     assert!(artifacts.is_empty());
     drop(artifacts);
+
+    let _ = shutdown.send(());
+    let _ = server.await?;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn submit_solution_fails_for_team_outside_hackathon() -> Result<()> {
+    let persistence = Arc::new(InMemoryPersistence::default());
+    seed_persistence(&persistence).await?;
+
+    let now = SystemTime::now();
+    let alternate = Hackathon::new(
+        EntityId("hack-2".into()),
+        HackathonName::new("HackTwo")?,
+        now - Duration::from_secs(120),
+        now + Duration::from_secs(3600),
+        TeamSizeLimit::new(5)?,
+    )?;
+    persistence
+        .hackathons
+        .write()
+        .await
+        .insert(alternate.id().to_string(), alternate);
+
+    let displaced_team = Team::new(
+        EntityId("team-1".into()),
+        EntityId("hack-2".into()),
+        TeamName::new("Alpha")?,
+        vec![EntityId("user-1".into())],
+    )?;
+    persistence
+        .teams
+        .write()
+        .await
+        .insert("team-1".into(), displaced_team);
+
+    let storage = Arc::new(MemoryStorage::default());
+    let repo_proof = Arc::new(MockRepoProof::default());
+
+    let dir = tempdir()?;
+    let socket_path = dir.path().join("hackcore.sock");
+
+    let (server, shutdown) = start_server(
+        persistence.clone(),
+        storage.clone(),
+        repo_proof,
+        socket_path.clone(),
+    )
+    .await;
+
+    tokio::time::sleep(Duration::from_millis(100)).await;
+
+    let channel = connect(&socket_path).await?;
+    let mut submits = SubmitsServiceClient::new(channel);
+
+    let err = submits
+        .submit_solution(SubmitSolutionRequest {
+            team_id: "team-1".into(),
+            hackathon_id: "hack-1".into(),
+            summary: "Great project".into(),
+            repository_binding: Some(RepositoryBinding {
+                provider: "github".into(),
+                repository: "org/repo".into(),
+                commit: "abc123".into(),
+                is_private: false,
+            }),
+        })
+        .await
+        .expect_err("submission should be rejected");
+    assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+    assert!(err
+        .message()
+        .contains("team 'team-1' is not registered for hackathon 'hack-1'"));
+
+    let stored = persistence.submissions.read().await;
+    assert!(stored.is_empty());
+    drop(stored);
 
     let _ = shutdown.send(());
     let _ = server.await?;

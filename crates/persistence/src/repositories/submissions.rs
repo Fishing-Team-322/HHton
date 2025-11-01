@@ -227,14 +227,6 @@ mod tests {
         let user = User::new(EntityId("user-1".into()), profile).unwrap();
         user_repo.upsert(&user).await.unwrap();
 
-        let team = core_domain::team::Team::new(
-            EntityId("team-1".into()),
-            TeamName::new("Dream Team").unwrap(),
-            vec![EntityId("user-1".into())],
-        )
-        .unwrap();
-        team_repo.upsert(&team).await.unwrap();
-
         let now = SystemTime::now();
         let hackathon = Hackathon::new(
             EntityId("hack-1".into()),
@@ -245,6 +237,15 @@ mod tests {
         )
         .unwrap();
         hackathon_repo.upsert(&hackathon).await.unwrap();
+
+        let team = core_domain::team::Team::new(
+            EntityId("team-1".into()),
+            EntityId("hack-1".into()),
+            TeamName::new("Dream Team").unwrap(),
+            vec![EntityId("user-1".into())],
+        )
+        .unwrap();
+        team_repo.upsert(&team).await.unwrap();
 
         let submission = Submission::new(
             EntityId("submission-1".into()),

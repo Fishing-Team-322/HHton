@@ -77,6 +77,13 @@ where
             .map_err(internal_error)?
             .ok_or_else(|| Status::not_found(format!("team '{}' not found", req.team_id)))?;
 
+        if team.hackathon_id().0 != req.hackathon_id {
+            return Err(Status::failed_precondition(format!(
+                "team '{}' is not registered for hackathon '{}'",
+                req.team_id, req.hackathon_id
+            )));
+        }
+
         HackathonRules::ensure_team_size_limit(hackathon.team_size_limit(), team.member_count())
             .map_err(|err| Status::failed_precondition(err.to_string()))?;
 

@@ -141,6 +141,7 @@ mod tests {
     fn ensure_member_cannot_join_twice() {
         let team = Team::new(
             EntityId("team-1".into()),
+            EntityId("hack-1".into()),
             TeamName::new("Team").unwrap(),
             vec![EntityId("user-1".into())],
         )
@@ -162,6 +163,7 @@ mod tests {
 
         let team = Team::new(
             EntityId("team-1".into()),
+            EntityId("hack-1".into()),
             TeamName::new("Team").unwrap(),
             vec![EntityId("user-1".into()), EntityId("user-2".into())],
         )

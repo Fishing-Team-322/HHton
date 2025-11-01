@@ -11,20 +11,35 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Team {
     id: EntityId,
+    hackathon_id: EntityId,
     name: TeamName,
     members: Vec<EntityId>,
 }
 
 impl Team {
-    pub fn new(id: EntityId, name: TeamName, members: Vec<EntityId>) -> Result<Self> {
+    pub fn new(
+        id: EntityId,
+        hackathon_id: EntityId,
+        name: TeamName,
+        members: Vec<EntityId>,
+    ) -> Result<Self> {
         validate_invariant(!members.is_empty())?;
         let mut unique: HashSet<EntityId> = HashSet::new();
         validate_invariant(members.iter().all(|member| unique.insert(member.clone())))?;
-        Ok(Self { id, name, members })
+        Ok(Self {
+            id,
+            hackathon_id,
+            name,
+            members,
+        })
     }
 
     pub fn name(&self) -> &TeamName {
         &self.name
+    }
+
+    pub fn hackathon_id(&self) -> &EntityId {
+        &self.hackathon_id
     }
 
     pub fn members(&self) -> &[EntityId] {
@@ -86,28 +101,33 @@ mod tests {
     #[test]
     fn team_requires_members() {
         let name = TeamName::new("Dream Team").unwrap();
-        assert!(Team::new(id("team-1"), name, vec![]).is_err());
+        assert!(Team::new(id("team-1"), id("hack-1"), name, vec![]).is_err());
     }
 
     #[test]
     fn team_rejects_duplicate_members() {
         let name = TeamName::new("Dream Team").unwrap();
         let member = id("user-1");
-        let result = Team::new(id("team-1"), name, vec![member.clone(), member]);
+        let result = Team::new(
+            id("team-1"),
+            id("hack-1"),
+            name,
+            vec![member.clone(), member],
+        );
         assert!(result.is_err());
     }
 
     #[test]
     fn cannot_add_duplicate_member() {
         let name = TeamName::new("Dream Team").unwrap();
-        let mut team = Team::new(id("team-1"), name, vec![id("user-1")]).unwrap();
+        let mut team = Team::new(id("team-1"), id("hack-1"), name, vec![id("user-1")]).unwrap();
         assert!(team.add_member(id("user-1")).is_err());
     }
 
     #[test]
     fn remove_member_requires_existing_member() {
         let name = TeamName::new("Dream Team").unwrap();
-        let mut team = Team::new(id("team-1"), name, vec![id("user-1")]).unwrap();
+        let mut team = Team::new(id("team-1"), id("hack-1"), name, vec![id("user-1")]).unwrap();
         assert!(team.remove_member(&id("user-2")).is_err());
     }
 }

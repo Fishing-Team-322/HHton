@@ -105,9 +105,12 @@ where
             .await
             .map_err(internal_error)?;
 
-        let placeholder_key = format!("submissions/{}/summary", stored.id());
         self.storage
-            .store_placeholder(&placeholder_key, stored.summary().value().as_bytes())
+            .store_placeholder(
+                stored.hackathon_id().0.as_ref(),
+                stored.id(),
+                stored.summary().value().as_bytes(),
+            )
             .await
             .map_err(internal_error)?;
 

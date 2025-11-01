@@ -1,5 +1,6 @@
 //! Object storage integration built on top of the official AWS SDK.
 
+use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::Context;
@@ -94,6 +95,12 @@ impl ObjectStorage {
 
     fn metadata_key(&self, event_id: &str, submission_id: &str) -> String {
         format!("{}.json", self.snapshot_base(event_id, submission_id))
+    }
+
+    fn artifact_key(&self, event_id: &str, submission_id: &str, artifact: &str) -> String {
+        let base = self.snapshot_base(event_id, submission_id);
+        let artifact = artifact.trim_start_matches('/');
+        format!("{base}/{artifact}")
     }
 
     /// Upload a submission snapshot archive and persist derived metadata alongside it.
@@ -219,11 +226,71 @@ impl ObjectStorage {
         Ok(())
     }
 
-    /// Stub upload method that will be replaced by a real implementation.
-    #[instrument(name = "storage.put_placeholder", skip(self, _bytes))]
-    pub async fn put_placeholder(&self, key: &str, _bytes: &[u8]) -> anyhow::Result<()> {
-        tracing::debug!(bucket = %self.bucket, %key, "queueing upload to S3");
-        let _client = self.client.clone();
+    /// Upload an arbitrary submission artifact to object storage.
+    #[instrument(name = "storage.put_placeholder", skip(self, bytes, metadata))]
+    pub async fn put_placeholder(
+        &self,
+        event_id: &str,
+        submission_id: &str,
+        artifact: &str,
+        bytes: &[u8],
+        metadata: Option<&HashMap<String, String>>,
+    ) -> anyhow::Result<()> {
+        let artifact_key = self.artifact_key(event_id, submission_id, artifact);
+
+        tracing::debug!(
+            bucket = %self.bucket,
+            %artifact_key,
+            metadata = metadata.as_ref().map(|m| m.len()).unwrap_or_default(),
+            "uploading submission artifact"
+        );
+
+        let mut request = self
+            .client
+            .put_object()
+            .bucket(&self.bucket)
+            .key(&artifact_key)
+            .body(ByteStream::from(bytes.to_vec()));
+
+        if let Some(metadata) = metadata {
+            request = request.set_metadata(Some(metadata.clone()));
+        }
+
+        request
+            .send()
+            .await
+            .with_context(|| format!("failed to upload artifact to '{artifact_key}'"))?;
+
         Ok(())
+    }
+
+    /// Download an arbitrary submission artifact from object storage.
+    #[instrument(name = "storage.get_placeholder", skip(self))]
+    pub async fn get_placeholder(
+        &self,
+        event_id: &str,
+        submission_id: &str,
+        artifact: &str,
+    ) -> anyhow::Result<Vec<u8>> {
+        let artifact_key = self.artifact_key(event_id, submission_id, artifact);
+
+        let object = self
+            .client
+            .get_object()
+            .bucket(&self.bucket)
+            .key(&artifact_key)
+            .send()
+            .await
+            .with_context(|| format!("failed to download artifact from '{artifact_key}'"))?;
+
+        let bytes = object
+            .body
+            .collect()
+            .await
+            .context("failed to collect artifact body")?
+            .into_bytes()
+            .to_vec();
+
+        Ok(bytes)
     }
 }

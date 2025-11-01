@@ -1,6 +1,7 @@
 use std::time::SystemTime;
 
 use anyhow::Result;
+use serde_json::Value;
 
 use crate::{
     model::{AggregateRoot, EntityId},
@@ -16,6 +17,7 @@ pub struct Submission {
     summary: SubmissionSummary,
     repository_binding: RepositoryBinding,
     created_at: SystemTime,
+    verification: Option<VerificationResult>,
 }
 
 impl Submission {
@@ -36,6 +38,7 @@ impl Submission {
             summary,
             repository_binding,
             created_at,
+            verification: None,
         })
     }
 
@@ -58,6 +61,14 @@ impl Submission {
     pub fn created_at(&self) -> SystemTime {
         self.created_at
     }
+
+    pub fn verification(&self) -> Option<&VerificationResult> {
+        self.verification.as_ref()
+    }
+
+    pub fn set_verification(&mut self, verification: VerificationResult) {
+        self.verification = Some(verification);
+    }
 }
 
 impl AggregateRoot for Submission {
@@ -72,6 +83,69 @@ pub struct RepositoryBinding {
     repository: String,
     reference: String,
     is_private: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum VerificationOutcome {
+    Accepted,
+    Rejected,
+}
+
+impl VerificationOutcome {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            VerificationOutcome::Accepted => "ACCEPTED",
+            VerificationOutcome::Rejected => "REJECTED",
+        }
+    }
+
+    pub fn from_str(value: &str) -> Option<Self> {
+        match value {
+            "ACCEPTED" => Some(VerificationOutcome::Accepted),
+            "REJECTED" => Some(VerificationOutcome::Rejected),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct VerificationResult {
+    outcome: VerificationOutcome,
+    reason: Option<String>,
+    checked_at: SystemTime,
+    proof: Option<Value>,
+}
+
+impl VerificationResult {
+    pub fn new(
+        outcome: VerificationOutcome,
+        reason: Option<String>,
+        checked_at: SystemTime,
+        proof: Option<Value>,
+    ) -> Self {
+        Self {
+            outcome,
+            reason,
+            checked_at,
+            proof,
+        }
+    }
+
+    pub fn outcome(&self) -> VerificationOutcome {
+        self.outcome
+    }
+
+    pub fn reason(&self) -> Option<&str> {
+        self.reason.as_deref()
+    }
+
+    pub fn checked_at(&self) -> SystemTime {
+        self.checked_at
+    }
+
+    pub fn proof(&self) -> Option<&Value> {
+        self.proof.as_ref()
+    }
 }
 
 impl RepositoryBinding {

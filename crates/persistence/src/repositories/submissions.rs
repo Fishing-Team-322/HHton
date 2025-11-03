@@ -206,7 +206,7 @@ mod tests {
         hackathons::HackathonRepository, teams::TeamRepository, users::UserRepository,
     };
     use core_domain::{
-        hackathon::{Hackathon, HackathonName, TeamSizeLimit},
+        hackathon::{Hackathon, HackathonDescription, HackathonName, TeamSizeLimit},
         team::TeamName,
         user::{DisplayName, EmailAddress, User, UserProfile},
     };
@@ -231,7 +231,10 @@ mod tests {
         let hackathon = Hackathon::new(
             EntityId("hack-1".into()),
             HackathonName::new("Hack").unwrap(),
+            HackathonDescription::new("Hack event").unwrap(),
             now - Duration::from_secs(3600),
+            now - Duration::from_secs(1800),
+            now - Duration::from_secs(600),
             now + Duration::from_secs(3600),
             TeamSizeLimit::new(4).unwrap(),
         )

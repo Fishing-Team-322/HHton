@@ -16,7 +16,7 @@ use contracts::repo_proof::{
 };
 use contracts::submits::submits_service_client::SubmitsServiceClient;
 use contracts::submits::{GetSubmissionRequest, RepositoryBinding, SubmitSolutionRequest};
-use core_domain::hackathon::{Hackathon, HackathonName, TeamSizeLimit};
+use core_domain::hackathon::{Hackathon, HackathonDescription, HackathonName, TeamSizeLimit};
 use core_domain::model::{AggregateRoot, EntityId};
 use core_domain::submission::Submission;
 use core_domain::team::{Team, TeamName};
@@ -177,7 +177,10 @@ async fn seed_persistence(persistence: &Arc<InMemoryPersistence>) -> Result<()> 
     let hackathon = Hackathon::new(
         EntityId("hack-1".into()),
         HackathonName::new("HackOne")?,
+        HackathonDescription::new("Annual HackOne event")?,
         now - Duration::from_secs(60),
+        now,
+        now + Duration::from_secs(1800),
         now + Duration::from_secs(3600),
         TeamSizeLimit::new(5)?,
     )?;
@@ -240,6 +243,34 @@ async fn connect(socket: &PathBuf) -> Result<Channel> {
 async fn server_serves_primary_rpcs() -> Result<()> {
     let persistence = Arc::new(InMemoryPersistence::default());
     seed_persistence(&persistence).await?;
+    let stored_event = {
+        let guard = persistence.hackathons.read().await;
+        guard
+            .get("hack-1")
+            .cloned()
+            .expect("seeded hackathon present")
+    };
+    let expected_description = stored_event.description().value().to_string();
+    let expected_start = stored_event
+        .start_time()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64;
+    let expected_end = stored_event
+        .end_time()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64;
+    let expected_registration = stored_event
+        .registration_deadline()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64;
+    let expected_submission = stored_event
+        .submission_deadline()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64;
     let storage = Arc::new(MemoryStorage::default());
     let repo_proof = Arc::new(MockRepoProof::default());
     let dir = tempdir()?;
@@ -287,6 +318,11 @@ async fn server_serves_primary_rpcs() -> Result<()> {
         .event
         .expect("event exists");
     assert_eq!(event.name, "HackOne");
+    assert_eq!(event.description, expected_description);
+    assert_eq!(event.start_time, expected_start);
+    assert_eq!(event.end_time, expected_end);
+    assert_eq!(event.registration_deadline, expected_registration);
+    assert_eq!(event.submission_deadline, expected_submission);
 
     let mut submits = SubmitsServiceClient::new(channel.clone());
     let submission = submits
@@ -509,7 +545,10 @@ async fn submit_solution_fails_for_team_outside_hackathon() -> Result<()> {
     let alternate = Hackathon::new(
         EntityId("hack-2".into()),
         HackathonName::new("HackTwo")?,
+        HackathonDescription::new("Second hackathon")?,
         now - Duration::from_secs(120),
+        now + Duration::from_secs(600),
+        now + Duration::from_secs(1200),
         now + Duration::from_secs(3600),
         TeamSizeLimit::new(5)?,
     )?;

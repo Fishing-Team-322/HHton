@@ -12,7 +12,10 @@ use crate::{
 pub struct Hackathon {
     id: EntityId,
     name: HackathonName,
+    description: HackathonDescription,
     registration_deadline: SystemTime,
+    start_time: SystemTime,
+    end_time: SystemTime,
     submission_deadline: SystemTime,
     team_size_limit: TeamSizeLimit,
 }
@@ -21,15 +24,23 @@ impl Hackathon {
     pub fn new(
         id: EntityId,
         name: HackathonName,
+        description: HackathonDescription,
         registration_deadline: SystemTime,
+        start_time: SystemTime,
+        end_time: SystemTime,
         submission_deadline: SystemTime,
         team_size_limit: TeamSizeLimit,
     ) -> Result<Self> {
-        validate_invariant(registration_deadline <= submission_deadline)?;
+        validate_invariant(registration_deadline <= start_time)?;
+        validate_invariant(start_time <= end_time)?;
+        validate_invariant(end_time <= submission_deadline)?;
         Ok(Self {
             id,
             name,
+            description,
             registration_deadline,
+            start_time,
+            end_time,
             submission_deadline,
             team_size_limit,
         })
@@ -39,8 +50,20 @@ impl Hackathon {
         &self.name
     }
 
+    pub fn description(&self) -> &HackathonDescription {
+        &self.description
+    }
+
     pub fn registration_deadline(&self) -> SystemTime {
         self.registration_deadline
+    }
+
+    pub fn start_time(&self) -> SystemTime {
+        self.start_time
+    }
+
+    pub fn end_time(&self) -> SystemTime {
+        self.end_time
     }
 
     pub fn submission_deadline(&self) -> SystemTime {
@@ -63,6 +86,22 @@ impl AggregateRoot for Hackathon {
 pub struct HackathonName(String);
 
 impl HackathonName {
+    pub fn new(value: impl Into<String>) -> Result<Self> {
+        let value = value.into();
+        validate_invariant(!value.trim().is_empty())?;
+        Ok(Self(value))
+    }
+
+    pub fn value(&self) -> &str {
+        &self.0
+    }
+}
+
+/// Value object capturing the hackathon description.
+#[derive(Debug, Clone)]
+pub struct HackathonDescription(String);
+
+impl HackathonDescription {
     pub fn new(value: impl Into<String>) -> Result<Self> {
         let value = value.into();
         validate_invariant(!value.trim().is_empty())?;
@@ -106,24 +145,81 @@ mod tests {
         let now = SystemTime::now();
         let later = now + std::time::Duration::from_secs(60);
         let name = HackathonName::new("Hack 2024").unwrap();
-        let limit = TeamSizeLimit::new(4).unwrap();
-        let hackathon = Hackathon::new(id("hack-1"), name, now, later, limit);
-        assert!(hackathon.is_ok());
-    }
-
-    #[test]
-    fn registration_deadline_must_precede_submission() {
-        let now = SystemTime::now();
-        let name = HackathonName::new("Hack 2024").unwrap();
+        let description = HackathonDescription::new("The best hackathon").unwrap();
         let limit = TeamSizeLimit::new(4).unwrap();
         let hackathon = Hackathon::new(
             id("hack-1"),
             name,
+            description,
             now,
-            now - std::time::Duration::from_secs(60),
+            now,
+            later,
+            later,
+            limit,
+        );
+        assert!(hackathon.is_ok());
+    }
+
+    #[test]
+    fn start_time_must_precede_end_time() {
+        let now = SystemTime::now();
+        let name = HackathonName::new("Hack 2024").unwrap();
+        let description = HackathonDescription::new("Another hackathon").unwrap();
+        let limit = TeamSizeLimit::new(4).unwrap();
+        let hackathon = Hackathon::new(
+            id("hack-1"),
+            name,
+            description,
+            now,
+            now + std::time::Duration::from_secs(120),
+            now + std::time::Duration::from_secs(60),
+            now + std::time::Duration::from_secs(360),
             limit,
         );
         assert!(hackathon.is_err());
+    }
+
+    #[test]
+    fn end_time_must_precede_submission_deadline() {
+        let now = SystemTime::now();
+        let name = HackathonName::new("Hack 2024").unwrap();
+        let description = HackathonDescription::new("The best hackathon").unwrap();
+        let limit = TeamSizeLimit::new(4).unwrap();
+        let hackathon = Hackathon::new(
+            id("hack-1"),
+            name,
+            description,
+            now,
+            now + std::time::Duration::from_secs(60),
+            now + std::time::Duration::from_secs(120),
+            now + std::time::Duration::from_secs(90),
+            limit,
+        );
+        assert!(hackathon.is_err());
+    }
+
+    #[test]
+    fn registration_deadline_must_precede_start_time() {
+        let now = SystemTime::now();
+        let name = HackathonName::new("Hack 2024").unwrap();
+        let description = HackathonDescription::new("Another hackathon").unwrap();
+        let limit = TeamSizeLimit::new(4).unwrap();
+        let hackathon = Hackathon::new(
+            id("hack-1"),
+            name,
+            description,
+            now + std::time::Duration::from_secs(120),
+            now,
+            now + std::time::Duration::from_secs(60),
+            now + std::time::Duration::from_secs(360),
+            limit,
+        );
+        assert!(hackathon.is_err());
+    }
+
+    #[test]
+    fn description_must_not_be_blank() {
+        assert!(HackathonDescription::new("   ").is_err());
     }
 
     #[test]

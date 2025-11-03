@@ -7,12 +7,14 @@ use persistence::{
     migrations,
     repositories::{
         hackathons::{HackathonRecord, HackathonRepository},
+        ratings::RatingRepository,
         submissions::SubmissionRepository,
         teams::TeamRepository,
         users::{UserRecord, UserRepository},
     },
     Database,
 };
+use ratings::{EventOutcome as RatingEventOutcome, ParticipantProfile as RatingParticipantProfile};
 use sqlx::PgPool;
 
 #[async_trait]
@@ -24,6 +26,16 @@ pub trait PersistenceGateway: Send + Sync {
     async fn insert_submission(&self, submission: Submission) -> Result<Submission>;
     async fn get_submission(&self, id: &str) -> Result<Option<Submission>>;
     async fn get_team(&self, id: &str) -> Result<Option<Team>>;
+    async fn get_participant_rating_profile(
+        &self,
+        participant_id: &str,
+    ) -> Result<Option<RatingParticipantProfile>>;
+    async fn list_participant_rating_profiles(&self) -> Result<Vec<RatingParticipantProfile>>;
+    async fn save_participant_rating_outcome(
+        &self,
+        profile: &RatingParticipantProfile,
+        new_event: &RatingEventOutcome,
+    ) -> Result<()>;
 }
 
 #[derive(Clone)]
@@ -105,6 +117,34 @@ impl PersistenceGateway for PostgresPersistence {
     async fn get_team(&self, id: &str) -> Result<Option<Team>> {
         let repo = TeamRepository::new(self.database.pool());
         repo.find_by_id(id).await.map_err(Into::into)
+    }
+
+    async fn get_participant_rating_profile(
+        &self,
+        participant_id: &str,
+    ) -> Result<Option<RatingParticipantProfile>> {
+        let repo = RatingRepository::new(self.database.pool());
+        repo.fetch_participant_profile(participant_id)
+            .await
+            .map_err(Into::into)
+    }
+
+    async fn list_participant_rating_profiles(&self) -> Result<Vec<RatingParticipantProfile>> {
+        let repo = RatingRepository::new(self.database.pool());
+        repo.fetch_all_participant_profiles()
+            .await
+            .map_err(Into::into)
+    }
+
+    async fn save_participant_rating_outcome(
+        &self,
+        profile: &RatingParticipantProfile,
+        new_event: &RatingEventOutcome,
+    ) -> Result<()> {
+        let repo = RatingRepository::new(self.database.pool());
+        repo.persist_participant_profile(profile, new_event)
+            .await
+            .map_err(Into::into)
     }
 }
 

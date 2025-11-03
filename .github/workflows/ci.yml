@@ -35,18 +35,18 @@ jobs:
         env:
           MINIO_ROOT_USER: hhton
           MINIO_ROOT_PASSWORD: hhtonsecret
+          MINIO_SERVER_OPTS: "--console-address :9001"
         options: >-
           --health-cmd "curl -f http://localhost:9000/minio/health/live || exit 1"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-        command: server /data --console-address ":9001"
     env:
-      DATABASE_URL: postgres://hhton:hhton@localhost:${{ job.services.postgres.ports['5432'] }}/hhton
+      DATABASE_URL: postgres://hhton:hhton@localhost:5432/hhton
       AWS_ACCESS_KEY_ID: hhton
       AWS_SECRET_ACCESS_KEY: hhtonsecret
       AWS_REGION: us-east-1
-      AWS_ENDPOINT_URL: http://127.0.0.1:${{ job.services.minio.ports['9000'] }}
+      AWS_ENDPOINT_URL: http://127.0.0.1:9000
 
     steps:
       - name: Checkout repository
@@ -72,11 +72,11 @@ jobs:
         env:
           PGPASSWORD: hhton
         run: |
-          until pg_isready -h localhost -p ${{ job.services.postgres.ports['5432'] }} -U hhton; do
+          until pg_isready -h localhost -p 5432 -U hhton; do
             echo "Waiting for PostgreSQL to be ready..."
             sleep 1
           done
-          until curl -sf http://127.0.0.1:${{ job.services.minio.ports['9000'] }}/minio/health/live > /dev/null; do
+          until curl -sf http://127.0.0.1:9000/minio/health/live > /dev/null; do
             echo "Waiting for MinIO to be ready..."
             sleep 1
           done
@@ -86,7 +86,7 @@ jobs:
           curl -sSfL https://dl.min.io/client/mc/release/linux-amd64/mc -o mc
           sudo install -m 755 mc /usr/local/bin/mc
           rm mc
-          mc alias set local http://127.0.0.1:${{ job.services.minio.ports['9000'] }} hhton hhtonsecret
+          mc alias set local http://127.0.0.1:9000 hhton hhtonsecret
           mc mb --ignore-existing local/hhton-dev
 
       - name: Check formatting

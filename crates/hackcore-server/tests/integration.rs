@@ -24,6 +24,9 @@ use core_domain::user::{DisplayName, EmailAddress, User, UserProfile};
 use hackcore_server::persistence::PersistenceGateway;
 use hackcore_server::serve_unix;
 use hackcore_server::services::{RepoProofAdapter, SubmissionArtifacts};
+use ratings::{
+    EventOutcome as DomainRatingOutcome, ParticipantProfile as DomainParticipantProfile,
+};
 use repo_proof::RepoProofClient;
 use tempfile::tempdir;
 use tokio::sync::{Mutex, RwLock};
@@ -38,6 +41,7 @@ struct InMemoryPersistence {
     hackathons: RwLock<HashMap<String, Hackathon>>,
     teams: RwLock<HashMap<String, Team>>,
     submissions: RwLock<HashMap<String, Submission>>,
+    ratings: RwLock<HashMap<String, DomainParticipantProfile>>,
 }
 
 #[async_trait]
@@ -76,6 +80,31 @@ impl PersistenceGateway for InMemoryPersistence {
 
     async fn get_team(&self, id: &str) -> Result<Option<Team>> {
         Ok(self.teams.read().await.get(id).cloned())
+    }
+
+    async fn get_participant_rating_profile(
+        &self,
+        id: &str,
+    ) -> Result<Option<DomainParticipantProfile>> {
+        Ok(self.ratings.read().await.get(id).cloned())
+    }
+
+    async fn list_participant_rating_profiles(&self) -> Result<Vec<DomainParticipantProfile>> {
+        let mut profiles: Vec<_> = self.ratings.read().await.values().cloned().collect();
+        profiles.sort_by(|a, b| a.participant_id.cmp(&b.participant_id));
+        Ok(profiles)
+    }
+
+    async fn save_participant_rating_outcome(
+        &self,
+        profile: &DomainParticipantProfile,
+        _new_event: &DomainRatingOutcome,
+    ) -> Result<()> {
+        self.ratings
+            .write()
+            .await
+            .insert(profile.participant_id.clone(), profile.clone());
+        Ok(())
     }
 }
 

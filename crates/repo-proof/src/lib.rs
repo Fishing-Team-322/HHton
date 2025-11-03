@@ -89,7 +89,7 @@ impl RepoProofService for RepoProofServiceHandler {
 
 /// Construct a gRPC service that answers repository proof requests.
 pub fn service() -> RepoProofServiceServer<RepoProofServiceHandler> {
-    RepoProofServiceServer::new(RepoProofServiceHandler::default())
+    RepoProofServiceServer::new(RepoProofServiceHandler)
 }
 
 /// Run the repository proof gRPC server until the provided shutdown signal resolves.

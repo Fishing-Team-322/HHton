@@ -43,7 +43,7 @@ where
     let participant_service = ParticipantsHandler::new(persistence.clone());
     let event_service = EventsHandler::new(persistence.clone());
     let submissions_service = SubmissionsService::new(persistence.clone(), storage, repo_proof);
-    let rating_service = RatingHandler::default();
+    let rating_service = RatingHandler::new(persistence.clone());
 
     Server::builder()
         .add_service(

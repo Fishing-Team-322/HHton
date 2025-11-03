@@ -124,7 +124,7 @@ mod tests {
     use super::*;
     use crate::repositories::hackathons::HackathonRepository;
     use core_domain::{
-        hackathon::{Hackathon, HackathonName, TeamSizeLimit},
+        hackathon::{Hackathon, HackathonDescription, HackathonName, TeamSizeLimit},
         team::TeamName,
     };
     use sqlx::PgPool;
@@ -139,7 +139,10 @@ mod tests {
         let hackathon = Hackathon::new(
             EntityId("hack-1".into()),
             HackathonName::new("Hack").unwrap(),
+            HackathonDescription::new("Hack event").unwrap(),
             now,
+            now + Duration::from_secs(600),
+            now + Duration::from_secs(1200),
             now + Duration::from_secs(3600),
             TeamSizeLimit::new(4).unwrap(),
         )

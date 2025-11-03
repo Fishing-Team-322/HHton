@@ -76,7 +76,7 @@ impl PersistenceGateway for PostgresPersistence {
 
     async fn list_hackathons(&self, limit: usize, offset: usize) -> Result<Vec<Hackathon>> {
         let records = sqlx::query_as::<_, HackathonRecord>(
-            r#"SELECT id, name, registration_deadline, submission_deadline, team_size_limit
+            r#"SELECT id, name, description, registration_deadline, start_time, end_time, submission_deadline, team_size_limit
             FROM hackathons ORDER BY registration_deadline DESC LIMIT $1 OFFSET $2"#,
         )
         .bind(limit as i64)

@@ -92,7 +92,7 @@ mod tests {
     use std::time::{Duration, SystemTime};
 
     use super::{
-        hackathon::{Hackathon, HackathonName, TeamSizeLimit},
+        hackathon::{Hackathon, HackathonDescription, HackathonName, TeamSizeLimit},
         model::EntityId,
         services::{HackathonRules, TeamRules},
         team::{Team, TeamName},
@@ -104,7 +104,10 @@ mod tests {
         let hackathon = Hackathon::new(
             EntityId("hack-1".into()),
             HackathonName::new("Hack").unwrap(),
+            HackathonDescription::new("Hack description").unwrap(),
             now + Duration::from_secs(60),
+            now + Duration::from_secs(90),
+            now + Duration::from_secs(100),
             now + Duration::from_secs(120),
             TeamSizeLimit::new(3).unwrap(),
         )
@@ -124,7 +127,10 @@ mod tests {
         let hackathon = Hackathon::new(
             EntityId("hack-1".into()),
             HackathonName::new("Hack").unwrap(),
+            HackathonDescription::new("Hack description").unwrap(),
             now - Duration::from_secs(60),
+            now - Duration::from_secs(30),
+            now,
             now + Duration::from_secs(30),
             TeamSizeLimit::new(3).unwrap(),
         )
@@ -155,7 +161,10 @@ mod tests {
         let hackathon = Hackathon::new(
             EntityId("hack-1".into()),
             HackathonName::new("Hack").unwrap(),
+            HackathonDescription::new("Hack description").unwrap(),
             now,
+            now + Duration::from_secs(30),
+            now + Duration::from_secs(60),
             now + Duration::from_secs(120),
             TeamSizeLimit::new(2).unwrap(),
         )
@@ -175,7 +184,10 @@ mod tests {
         let roomy_hackathon = Hackathon::new(
             EntityId("hack-2".into()),
             HackathonName::new("Hack").unwrap(),
+            HackathonDescription::new("Hack description").unwrap(),
             now,
+            now + Duration::from_secs(30),
+            now + Duration::from_secs(60),
             now + Duration::from_secs(120),
             TeamSizeLimit::new(3).unwrap(),
         )

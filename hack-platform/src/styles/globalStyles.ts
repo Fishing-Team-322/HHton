@@ -970,26 +970,29 @@ textarea {
 }
 
 /* Auth styles */
+
 .auth-root {
+  width: 100%;
   min-height: 100vh;
-  display: grid;
-  place-items: center;
+  padding: 40px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: radial-gradient(circle at 20% 20%, rgba(0, 179, 255, 0.06), transparent 25%),
     radial-gradient(circle at 80% 0%, rgba(159, 239, 0, 0.08), transparent 30%),
     var(--bg);
-  padding: 24px;
 }
 
 .auth-card {
-  display: grid;
-  grid-template-columns: 1.1fr 1fr;
-  background: var(--panel-strong);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
-  max-width: 1100px;
   width: 100%;
+  max-width: 1120px;
+  background: var(--panel);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  overflow: hidden;
   min-height: 520px;
 }
 

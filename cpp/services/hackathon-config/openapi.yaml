@@ -1,0 +1,243 @@
+openapi: 3.0.3
+info:
+  title: Hackathon Config API
+  version: 0.1.0
+servers:
+  - url: http://localhost:8080
+paths:
+  /api/v1/hackathons:
+    post:
+      summary: Create a hackathon
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HackathonCreate'
+      responses:
+        '201':
+          description: Hackathon created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HackathonId'
+        '400':
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/hackathons/{id}:
+    get:
+      summary: Get a hackathon by id
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Hackathon details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Hackathon'
+        '404':
+          description: Hackathon not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      summary: Update a hackathon
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HackathonUpdate'
+      responses:
+        '204':
+          description: Hackathon updated
+        '400':
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Hackathon not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizers/{organizerId}/hackathons:
+    get:
+      summary: List hackathons for an organizer
+      parameters:
+        - in: path
+          name: organizerId
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Hackathons belonging to the organizer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HackathonSummary'
+        '400':
+          description: Unable to list hackathons
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  schemas:
+    HackathonId:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+      required:
+        - id
+    HackathonCreate:
+      type: object
+      properties:
+        organizer_id:
+          type: integer
+          format: int64
+          description: Identifier of the organizer creating the hackathon.
+        title:
+          type: string
+          description: Title of the hackathon.
+        description:
+          type: string
+          description: Detailed description of the hackathon.
+        format:
+          type: string
+          description: Format of the hackathon (e.g., online, onsite, hybrid).
+        location:
+          type: string
+          nullable: true
+          description: Optional location information.
+        start_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Optional start datetime.
+        end_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Optional end datetime.
+        status:
+          type: string
+          description: Lifecycle status of the hackathon (e.g., draft, published).
+      required:
+        - organizer_id
+        - title
+        - description
+        - format
+        - status
+    HackathonUpdate:
+      type: object
+      description: Fields that can be updated on an existing hackathon. The organizer_id cannot be modified.
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        format:
+          type: string
+        location:
+          type: string
+          nullable: true
+        start_at:
+          type: string
+          format: date-time
+          nullable: true
+        end_at:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+    HackathonSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        status:
+          type: string
+        start_at:
+          type: string
+          format: date-time
+          nullable: true
+        end_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - id
+        - title
+        - status
+    Hackathon:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        organizer_id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        description:
+          type: string
+        format:
+          type: string
+        location:
+          type: string
+          nullable: true
+        start_at:
+          type: string
+          format: date-time
+          nullable: true
+        end_at:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+      required:
+        - id
+        - organizer_id
+        - title
+        - description
+        - format
+        - status
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error

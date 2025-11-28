@@ -37,3 +37,8 @@
 - Переменная окружения `S3_BUCKET` указывает имя S3‑бакета для сохранения артефактов (в docker-compose создаётся MinIO бакет по умолчанию).
 - `REPO_PROOF_ENDPOINT` задаёт gRPC‑адрес сервиса проверки привязки репозитория (по умолчанию `http://127.0.0.1:50060` в docker-compose).
 - Для локального запуска через Docker Compose используйте `make up`; для разработки вне Compose настройте PostgreSQL, MinIO/S3 и запустите бинарь `hackcore-server`.
+
+## Swagger UI для C++ сервиса конфигурации хакатонов
+- Поднимите сервисы хакатон-конфига и Postgres командой `docker compose up -d postgres` и сборкой самого сервиса (см. `cpp/services/hackathon-config`).
+- Для просмотра документации OpenAPI поднимите `swagger-ui`: `docker compose up -d swagger-ui`.
+- Swagger UI будет доступен по адресу http://localhost:8081 и автоматически загрузит спецификацию из `cpp/services/hackathon-config/openapi.yaml`.

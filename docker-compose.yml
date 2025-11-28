@@ -99,6 +99,15 @@ services:
     expose:
       - "50060"
 
+  swagger-ui:
+    image: swaggerapi/swagger-ui
+    environment:
+      SWAGGER_JSON: /usr/share/nginx/html/openapi.yaml
+    volumes:
+      - ./cpp/services/hackathon-config/openapi.yaml:/usr/share/nginx/html/openapi.yaml:ro
+    ports:
+      - "8081:8080"
+
 volumes:
   postgres-data:
   minio-data:

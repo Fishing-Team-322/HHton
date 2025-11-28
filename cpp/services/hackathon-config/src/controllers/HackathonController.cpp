@@ -3,8 +3,79 @@
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 #include <optional>
+#include <regex>
+#include <unordered_set>
+#include <vector>
 
 using nlohmann::json;
+
+namespace {
+const std::unordered_set<std::string> kAllowedFormats = {"online", "offline", "hybrid"};
+const std::unordered_set<std::string> kAllowedStatuses = {"draft", "published", "archived"};
+
+bool matches_datetime(const std::string& value) {
+    static const std::regex pattern(R"(^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:?\d{2})?$)");
+    return std::regex_match(value, pattern);
+}
+
+std::optional<std::string> validate_payload(const json& payload) {
+    const std::vector<std::string> required_fields = {"organizer_id", "title", "description", "format", "status"};
+    for (const auto& field : required_fields) {
+        if (!payload.contains(field)) {
+            return std::string("Missing required field: ") + field;
+        }
+    }
+
+    if (!payload["organizer_id"].is_number_integer() || payload["organizer_id"].get<long long>() <= 0) {
+        return "organizer_id must be a positive integer";
+    }
+    if (!payload["title"].is_string() || payload["title"].get_ref<const std::string&>().empty()) {
+        return "title must be a non-empty string";
+    }
+    if (!payload["description"].is_string() || payload["description"].get_ref<const std::string&>().empty()) {
+        return "description must be a non-empty string";
+    }
+    if (!payload["format"].is_string()) {
+        return "format must be a string";
+    }
+    if (!kAllowedFormats.contains(payload["format"].get_ref<const std::string&>())) {
+        return "Invalid format. Allowed values: online, offline, hybrid";
+    }
+
+    if (payload.contains("location") && !payload["location"].is_string() && !payload["location"].is_null()) {
+        return "location must be a string or null";
+    }
+
+    auto validate_datetime_field = [](const json& obj, const std::string& field) -> std::optional<std::string> {
+        if (!obj.contains(field) || obj[field].is_null()) {
+            return std::nullopt;
+        }
+        if (!obj[field].is_string()) {
+            return field + " must be a string or null";
+        }
+        if (!matches_datetime(obj[field].get_ref<const std::string&>())) {
+            return field + " must follow ISO-8601 format (e.g. 2025-11-28T09:06:43 or 2025-11-28T09:06:43Z)";
+        }
+        return std::nullopt;
+    };
+
+    if (auto err = validate_datetime_field(payload, "start_at")) {
+        return err;
+    }
+    if (auto err = validate_datetime_field(payload, "end_at")) {
+        return err;
+    }
+
+    if (!payload["status"].is_string()) {
+        return "status must be a string";
+    }
+    if (!kAllowedStatuses.contains(payload["status"].get_ref<const std::string&>())) {
+        return "Invalid status. Allowed values: draft, published, archived";
+    }
+
+    return std::nullopt;
+}
+} // namespace
 
 std::shared_ptr<HackathonRepository> HackathonController::repo_ = nullptr;
 
@@ -18,23 +89,30 @@ void HackathonController::create_hackathon(const drogon::HttpRequestPtr& req, st
         return;
     }
 
+    json payload;
     try {
-        auto payload = json::parse(req->getBody());
-        if (!payload.contains("organizer_id") || !payload.contains("title") || !payload.contains("description") ||
-            !payload.contains("format") || !payload.contains("status")) {
-            callback(bad_request("Missing required fields"));
-            return;
-        }
+        payload = json::parse(req->getBody());
+    } catch (const std::exception& ex) {
+        spdlog::warn("Failed to parse create_hackathon payload: {}", ex.what());
+        callback(bad_request("Invalid JSON payload"));
+        return;
+    }
 
+    if (auto validation_error = validate_payload(payload)) {
+        callback(bad_request(*validation_error));
+        return;
+    }
+
+    try {
         Hackathon h{};
-        h.organizer_id = payload.value("organizer_id", 0LL);
-        h.title = payload.value("title", "");
-        h.description = payload.value("description", "");
-        h.format = payload.value("format", "");
+        h.organizer_id = payload["organizer_id"].get<long long>();
+        h.title = payload["title"].get<std::string>();
+        h.description = payload["description"].get<std::string>();
+        h.format = payload["format"].get<std::string>();
         h.location = payload.contains("location") && !payload["location"].is_null() ? std::optional<std::string>(payload["location"].get<std::string>()) : std::nullopt;
         h.start_at = payload.contains("start_at") && !payload["start_at"].is_null() ? std::optional<std::string>(payload["start_at"].get<std::string>()) : std::nullopt;
         h.end_at = payload.contains("end_at") && !payload["end_at"].is_null() ? std::optional<std::string>(payload["end_at"].get<std::string>()) : std::nullopt;
-        h.status = payload.value("status", "draft");
+        h.status = payload["status"].get<std::string>();
 
         auto new_id = repo_->create(h);
         json response{{"id", new_id}};
@@ -45,7 +123,7 @@ void HackathonController::create_hackathon(const drogon::HttpRequestPtr& req, st
         callback(resp);
     } catch (const std::exception& ex) {
         spdlog::error("Failed to create hackathon: {}", ex.what());
-        callback(bad_request("Invalid request payload"));
+        callback(internal_error());
     }
 }
 
@@ -192,3 +270,5 @@ drogon::HttpResponsePtr HackathonController::no_content() {
     resp->setStatusCode(drogon::k204NoContent);
     return resp;
 }
+#include <regex>
+#include <unordered_set>

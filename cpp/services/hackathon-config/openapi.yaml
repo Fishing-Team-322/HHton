@@ -27,6 +27,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+    get:
+      summary: List all hackathons
+      responses:
+        '200':
+          description: Collection of hackathons
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HackathonSummary'
+        '400':
+          description: Unable to list hackathons
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/hackathons/{id}:
     get:
       summary: Get a hackathon by id
@@ -80,12 +97,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizers/{organizerId}/hackathons:
+  /api/v1/organizers/{organizer_id}/hackathons:
     get:
       summary: List hackathons for an organizer
       parameters:
         - in: path
-          name: organizerId
+          name: organizer_id
           required: true
           schema:
             type: integer

@@ -12,10 +12,9 @@ int main() {
 
     DbPool pool(config.db_conn_str);
     auto repository = std::make_shared<HackathonRepository>(pool);
-    auto controller = std::make_shared<HackathonController>(repository);
+    HackathonController::set_repository(repository);
 
     drogon::app()
-        .registerController(controller)
         .addListener("0.0.0.0", static_cast<uint16_t>(config.http_port))
         .run();
 

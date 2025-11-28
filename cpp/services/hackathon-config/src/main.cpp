@@ -15,8 +15,32 @@ int main() {
     auto repository = std::make_shared<HackathonRepository>(pool);
     HackathonController::set_repository(repository);
 
-    drogon::app()
-        .addListener("0.0.0.0", static_cast<uint16_t>(config.http_port))
+    constexpr auto cors_origin = "http://localhost:8081";
+    auto &app = drogon::app();
+
+    app.registerBeginningAdvice([cors_origin](const drogon::HttpRequestPtr &req,
+                                              drogon::AdviceCallback &&cb,
+                                              drogon::AdviceChainCallback &&chain_cb) {
+        if (req->path().rfind("/api/", 0) == 0 && req->method() == drogon::Options) {
+            auto resp = drogon::HttpResponse::newHttpResponse();
+            resp->setStatusCode(drogon::k204NoContent);
+            resp->addHeader("Access-Control-Allow-Origin", cors_origin);
+            resp->addHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+            resp->addHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+            cb(resp);
+            return;
+        }
+        chain_cb();
+    });
+
+    app.registerPostHandlingAdvice(
+        [cors_origin](const drogon::HttpRequestPtr &req, const drogon::HttpResponsePtr &resp) {
+            if (req->path().rfind("/api/", 0) == 0) {
+                resp->addHeader("Access-Control-Allow-Origin", cors_origin);
+            }
+        });
+
+    app.addListener("0.0.0.0", static_cast<uint16_t>(config.http_port))
         .run();
 
     return 0;

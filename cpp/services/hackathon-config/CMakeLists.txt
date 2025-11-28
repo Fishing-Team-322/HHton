@@ -26,7 +26,7 @@ target_link_libraries(hackathon_config
         Drogon::Drogon
         nlohmann_json::nlohmann_json
         spdlog::spdlog
-        pqxx::pqxx
+        libpqxx::pqxx
 )
 
 target_include_directories(hackathon_config PRIVATE src)

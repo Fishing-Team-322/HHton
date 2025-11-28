@@ -6,7 +6,7 @@
 
 class DbPool {
 public:
-    explicit DbPool(std::string conn_str) : conn_str_(std::move(conn_str)) {}
+    explicit DbPool(std::string conn_str);
     virtual ~DbPool() = default;
 
     virtual std::unique_ptr<pqxx::connection> acquire() const;

@@ -9,6 +9,7 @@
 int main() {
     auto config = load_config_from_env();
     spdlog::info("Starting hackathon-config service on port {}", config.http_port);
+    spdlog::info("Using DB connection string from {}: {}", config.db_conn_source, config.db_conn_log_hint);
 
     DbPool pool(config.db_conn_str);
     auto repository = std::make_shared<HackathonRepository>(pool);

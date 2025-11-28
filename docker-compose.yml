@@ -104,7 +104,7 @@ services:
     environment:
       SWAGGER_JSON: /usr/share/nginx/html/openapi.yaml
     volumes:
-      - ./cpp/services/hackathon-config/openapi.yaml:/usr/share/nginx/html/openapi.yaml:ro
+      - ./cpp/services/hackathon-config/openapi.yaml:/usr/share/nginx/html/openapi-local.yaml:ro
     ports:
       - "8081:8080"
 

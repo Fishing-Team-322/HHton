@@ -15,9 +15,9 @@ long long HackathonRepository::create(const Hackathon& h) {
         h.title,
         h.description,
         h.format,
-        h.location ? *h.location : pqxx::null{},
-        h.start_at ? *h.start_at : pqxx::null{},
-        h.end_at ? *h.end_at : pqxx::null{},
+        h.location,
+        h.start_at,
+        h.end_at,
         h.status);
 
     tx.commit();
@@ -65,9 +65,9 @@ void HackathonRepository::update(long long id, const Hackathon& h) {
         h.title,
         h.description,
         h.format,
-        h.location ? *h.location : pqxx::null{},
-        h.start_at ? *h.start_at : pqxx::null{},
-        h.end_at ? *h.end_at : pqxx::null{},
+        h.location,
+        h.start_at,
+        h.end_at,
         h.status);
 
     tx.commit();

@@ -7,7 +7,7 @@
 
 class HackathonController : public drogon::HttpController<HackathonController> {
 public:
-    explicit HackathonController(std::shared_ptr<HackathonRepository> repo);
+    static void set_repository(std::shared_ptr<HackathonRepository> repo);
 
     METHOD_LIST_BEGIN
     ADD_METHOD_TO(HackathonController::create_hackathon, "/api/v1/hackathons", drogon::Post);
@@ -22,9 +22,10 @@ public:
     void update_hackathon(const drogon::HttpRequestPtr& req, std::function<void (const drogon::HttpResponsePtr &)> &&callback, long long id);
 
 private:
-    std::shared_ptr<HackathonRepository> repository_;
+    static std::shared_ptr<HackathonRepository> repo_;
 
     static drogon::HttpResponsePtr bad_request(const std::string& message);
+    static drogon::HttpResponsePtr internal_error();
     static drogon::HttpResponsePtr not_found();
     static drogon::HttpResponsePtr no_content();
 };

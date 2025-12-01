@@ -25,6 +25,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activePage, onChangePage }) =>
     </div>
     <SidebarItem label="Главная" active={activePage === "dashboard"} onClick={() => onChangePage("dashboard")} />
     <SidebarItem label="Хакатоны" />
+    <SidebarItem label="Конструктор" active={activePage === "hackathon-config"} onClick={() => onChangePage("hackathon-config")} />
     <SidebarItem label="Команды" active={activePage === "teams"} onClick={() => onChangePage("teams")} />
     <SidebarItem label="Рейтинг" />
     <SidebarItem label="HR-панель" />

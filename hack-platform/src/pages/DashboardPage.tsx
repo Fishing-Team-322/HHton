@@ -4,7 +4,11 @@ import { HackathonCard } from "../components/hackathons/HackathonCard";
 import { StatCard } from "../components/common/StatCard";
 import { hackathonsMock, userStats } from "../mockData";
 
-export const DashboardPage: React.FC = () => {
+interface DashboardPageProps {
+  onOpenHackConfig?: () => void;
+}
+
+export const DashboardPage: React.FC<DashboardPageProps> = ({ onOpenHackConfig }) => {
   const [hackathonTab, setHackathonTab] = useState<HackathonTab>("recommended");
 
   const filteredHackathons = useMemo(() => {
@@ -59,17 +63,22 @@ export const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="tabs">
-        <button className={`tab ${hackathonTab === "recommended" ? "active" : ""}`} onClick={() => setHackathonTab("recommended")}>
-          Рекомендуемые
-        </button>
-        <button className={`tab ${hackathonTab === "inprogress" ? "active" : ""}`} onClick={() => setHackathonTab("inprogress")}>
-          В прогрессе
-        </button>
-        <button className={`tab ${hackathonTab === "favorites" ? "active" : ""}`} onClick={() => setHackathonTab("favorites")}>
-          Избранные
-        </button>
-      </div>
+        <div className="hack-toolbar">
+          <div className="tabs">
+            <button className={`tab ${hackathonTab === "recommended" ? "active" : ""}`} onClick={() => setHackathonTab("recommended")}>
+              Рекомендуемые
+            </button>
+            <button className={`tab ${hackathonTab === "inprogress" ? "active" : ""}`} onClick={() => setHackathonTab("inprogress")}>
+              В прогрессе
+            </button>
+            <button className={`tab ${hackathonTab === "favorites" ? "active" : ""}`} onClick={() => setHackathonTab("favorites")}>
+              Избранные
+            </button>
+          </div>
+          <button className="ghost-btn" onClick={onOpenHackConfig}>
+            Открыть конструктор хакатона
+          </button>
+        </div>
 
       <div className="cards-grid">
         {filteredHackathons.map((h) => (

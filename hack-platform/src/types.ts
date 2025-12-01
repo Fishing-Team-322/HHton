@@ -26,6 +26,6 @@ export interface Team {
   level: "beginner" | "mixed" | "pro";
 }
 
-export type Page = "dashboard" | "profile" | "teams";
+export type Page = "dashboard" | "profile" | "teams" | "hackathon-config";
 export type HackathonTab = "recommended" | "inprogress" | "favorites";
 export type ProfileTab = "overview" | "activity" | "badges" | "certificates";

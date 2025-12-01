@@ -1094,6 +1094,7 @@ textarea {
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
+  margin-top: 8px;
 }
 
 .hack-config-layout {
@@ -1226,6 +1227,17 @@ textarea {
 
 .hack-config-form .form-actions {
   margin-top: 6px;
+}
+
+@media (max-width: 768px) {
+  .hack-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hack-toolbar .primary-btn {
+    width: 100%;
+  }
 }
 
 @media (max-width: 960px) {

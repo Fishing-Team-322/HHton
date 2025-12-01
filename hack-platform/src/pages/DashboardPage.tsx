@@ -63,22 +63,31 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onOpenHackConfig }
         </div>
       </div>
 
-        <div className="hack-toolbar">
-          <div className="tabs">
-            <button className={`tab ${hackathonTab === "recommended" ? "active" : ""}`} onClick={() => setHackathonTab("recommended")}>
-              Рекомендуемые
-            </button>
-            <button className={`tab ${hackathonTab === "inprogress" ? "active" : ""}`} onClick={() => setHackathonTab("inprogress")}>
-              В прогрессе
-            </button>
-            <button className={`tab ${hackathonTab === "favorites" ? "active" : ""}`} onClick={() => setHackathonTab("favorites")}>
-              Избранные
-            </button>
-          </div>
-          <button className="ghost-btn" onClick={onOpenHackConfig}>
-            Открыть конструктор хакатона
+      <div className="hack-toolbar">
+        <div className="tabs">
+          <button
+            className={`tab ${hackathonTab === "recommended" ? "active" : ""}`}
+            onClick={() => setHackathonTab("recommended")}
+          >
+            Рекомендуемые
+          </button>
+          <button
+            className={`tab ${hackathonTab === "inprogress" ? "active" : ""}`}
+            onClick={() => setHackathonTab("inprogress")}
+          >
+            В прогрессе
+          </button>
+          <button
+            className={`tab ${hackathonTab === "favorites" ? "active" : ""}`}
+            onClick={() => setHackathonTab("favorites")}
+          >
+            Избранные
           </button>
         </div>
+        <button className="primary-btn" onClick={() => onOpenHackConfig?.()}>
+          Создать мероприятие
+        </button>
+      </div>
 
       <div className="cards-grid">
         {filteredHackathons.map((h) => (

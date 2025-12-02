@@ -48,6 +48,12 @@ export const hackathonsMock: Hackathon[] = [
   },
 ];
 
+export const currentUser = {
+  nickname: "@volkov.dev",
+  fullName: "Алексей Волков",
+  email: "you@example.com",
+};
+
 export const userStats: UserStats = {
   totalHackathons: 18,
   wins: 4,

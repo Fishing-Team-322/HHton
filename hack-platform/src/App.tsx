@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { css, Global, ThemeProvider } from "@emotion/react";
 import styled from "@emotion/styled";
 import type { Hackathon, HackathonTab, Page, Team } from "./types";
-import { hackathonsMock, initialTeams, userStats } from "./mockData";
+import { currentUser, hackathonsMock, initialTeams, userStats } from "./mockData";
 import ProfilePage from "./pages/ProfilePage";
 
 type HackathonFormat = "online" | "offline" | "hybrid";
@@ -263,6 +263,88 @@ const TopbarRight = styled.div`
   gap: 10px;
 `;
 
+const UserMenuRoot = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+`;
+
+const UserMenuButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: ${({ theme }) => theme.colors.card};
+  border: 1px solid ${({ theme }) => theme.colors.borderSoft};
+  border-radius: ${({ theme }) => theme.radii.card}px;
+  padding: 8px 12px;
+  cursor: pointer;
+  color: ${({ theme }) => theme.colors.text};
+  font-weight: 700;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.cardSoft};
+    border-color: ${({ theme }) => theme.colors.accentSoft};
+    color: ${({ theme }) => theme.colors.text};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.accentSoft};
+    outline-offset: 2px;
+  }
+`;
+
+const UserAvatar = styled.div`
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #a3ff12, #6ee7b7, #7dd3fc);
+  box-shadow: 0 0 0 1px rgba(163, 255, 18, 0.4);
+`;
+
+const CaretIcon = styled.span<{ open: boolean }>`
+  font-size: 12px;
+  color: ${({ theme }) => theme.colors.textMuted};
+  transition: transform 0.14s ease;
+  transform: rotate(${({ open }) => (open ? "180deg" : "0deg")});
+  display: inline-flex;
+  align-items: center;
+`;
+
+const UserMenuDropdown = styled.div`
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  background: ${({ theme }) => theme.colors.card};
+  border: 1px solid ${({ theme }) => theme.colors.borderSoft};
+  border-radius: ${({ theme }) => theme.radii.card}px;
+  box-shadow: 0 16px 40px rgba(2, 6, 23, 0.6);
+  min-width: 200px;
+  overflow: hidden;
+  z-index: 10;
+`;
+
+const UserMenuItem = styled.button`
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: ${({ theme }) => theme.colors.text};
+  padding: 12px 14px;
+  text-align: left;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.12s ease, color 0.12s ease;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.cardSoft};
+    color: ${({ theme }) => theme.colors.text};
+  }
+
+  & + & {
+    border-top: 1px solid ${({ theme }) => theme.colors.borderSoft};
+  }
+`;
+
 const GhostButton = styled.button`
   background: ${({ theme }) => theme.colors.card};
   color: ${({ theme }) => theme.colors.text};
@@ -291,14 +373,6 @@ const AccentButton = styled.button`
     transform: translateY(-1px);
     box-shadow: 0 8px 20px rgba(163, 255, 18, 0.35);
   }
-`;
-
-const Avatar = styled.div`
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #111827, #0f172a);
-  border: 1px solid ${({ theme }) => theme.colors.borderSoft};
 `;
 
 const Content = styled.main`
@@ -693,6 +767,51 @@ const AuthError = styled.div`
   border-radius: ${({ theme }) => theme.radii.card}px;
   padding: 10px 12px;
 `;
+
+interface UserMenuProps {
+  nickname: string;
+  onProfileClick: () => void;
+}
+
+const UserMenu: React.FC<UserMenuProps> = ({ nickname, onProfileClick }) => {
+  const [open, setOpen] = useState(false);
+
+  const toggle = () => setOpen((v) => !v);
+  const close = () => setOpen(false);
+
+  return (
+    <UserMenuRoot tabIndex={0} onBlur={close}>
+      <UserMenuButton type="button" onClick={toggle}>
+        <UserAvatar />
+        <span>{nickname}</span>
+        <CaretIcon open={open}>▾</CaretIcon>
+      </UserMenuButton>
+
+      {open && (
+        <UserMenuDropdown>
+          <UserMenuItem
+            type="button"
+            onClick={() => {
+              onProfileClick();
+              close();
+            }}
+          >
+            Профиль
+          </UserMenuItem>
+          <UserMenuItem
+            type="button"
+            onClick={() => {
+              console.log("open account settings");
+              close();
+            }}
+          >
+            Настройки аккаунта
+          </UserMenuItem>
+        </UserMenuDropdown>
+      )}
+    </UserMenuRoot>
+  );
+};
 
 const initialFormState: {
   title: string;
@@ -1196,10 +1315,10 @@ const App: React.FC = () => {
               </SearchBox>
             </TopbarLeft>
             <TopbarRight>
-              <AccentButton>Upgrade</AccentButton>
-              <GhostButton>Connect</GhostButton>
-              <GhostButton>Invite</GhostButton>
-              <Avatar />
+              <UserMenu
+                nickname={currentUser.nickname}
+                onProfileClick={() => handleChangePage("profile")}
+              />
             </TopbarRight>
           </Topbar>
 

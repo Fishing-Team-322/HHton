@@ -1,3 +1,5 @@
 /target
 **/*.rs.bk
 Cargo.lock
+hack-platform/package-lock.json
+hack-platform/package.json

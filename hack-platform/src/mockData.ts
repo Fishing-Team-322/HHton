@@ -55,11 +55,53 @@ export const userStats: UserStats = {
   averagePlace: 3.2,
 };
 
+export const profileStats = userStats;
+
+export const profileDetails = {
+  name: "Алексей Волков",
+  nickname: "@volkov.dev",
+  city: "Москва",
+  role: "Frontend · React / TypeScript",
+  joined: "Октябрь 2024",
+  bio: "Делаю живые прототипы, люблю командные спринты и быстрые демо для жюри.",
+  activityProgress: 70,
+  nextLevelHint: "Участвуйте в новых хакатонах, чтобы открыть дополнительные слоты для команд.",
+};
+
+export const profileSeason = {
+  tier: "Bronze Tier",
+  progress: 64,
+  note: "Ранг растёт с участием в командных и соло хакатонах. Следующий чекпоинт через 2 участия.",
+};
+
 export const timeline = [
   { label: "Присоединился к команде Neon Ninjas", date: "18 фев 2025" },
   { label: "Команда заняла 2 место на HealthTech Surge", date: "4 фев 2025" },
   { label: "Участвовал в AI Red Team Challenge", date: "21 янв 2025" },
   { label: "Получил бейдж 'Ночной кодер'", date: "15 янв 2025" },
+];
+
+export const activityFeed = [
+  {
+    title: "Занял 2 место на HealthTech Surge · роль — Security",
+    date: "27 ноября, 2025",
+    ago: "5 days ago",
+  },
+  {
+    title: "Релиз демо на GreenCode Sustainability Sprint · роль — Backend",
+    date: "15 ноября, 2025",
+    ago: "2 weeks ago",
+  },
+  {
+    title: "Участвовал в AI Red Team Challenge · роль — Data Science",
+    date: "21 октября, 2025",
+    ago: "1 month ago",
+  },
+  {
+    title: "Получил бейдж 'Ночной кодер'",
+    date: "15 октября, 2025",
+    ago: "1 month ago",
+  },
 ];
 
 export const overviewEntries = [

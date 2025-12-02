@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { css, Global, ThemeProvider } from "@emotion/react";
 import styled from "@emotion/styled";
-import MainTabs, { type MainTab } from "./components/MainTabs";
 import type { Hackathon, HackathonTab, Page, Team } from "./types";
 import { hackathonsMock, initialTeams, userStats } from "./mockData";
 import ProfilePage from "./pages/ProfilePage";
@@ -955,7 +954,6 @@ const HackathonConfigPage: React.FC<HackathonConfigPageProps> = ({ organizerId, 
 
 const App: React.FC = () => {
   const [activePage, setActivePage] = useState<Page>("dashboard");
-  const [mainTab, setMainTab] = useState<MainTab>("home");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [hackathonTab, setHackathonTab] = useState<HackathonTab>("recommended");
   const [teams, setTeams] = useState<Team[]>(initialTeams);
@@ -987,18 +985,8 @@ const App: React.FC = () => {
     return hackathonsMock.filter((h) => h.status !== "finished");
   }, [hackathonTab]);
 
-  const handleMainTabChange = (tab: MainTab) => {
-    setMainTab(tab);
-    if (tab === "home") setActivePage("dashboard");
-    if (tab === "profile") setActivePage("profile");
-    if (tab === "teams") setActivePage("teams");
-  };
-
   const handleChangePage = (page: Page) => {
     setActivePage(page);
-    if (page === "dashboard") setMainTab("home");
-    if (page === "profile") setMainTab("profile");
-    if (page === "teams") setMainTab("teams");
   };
 
   const handleCreateTeam = (e: React.FormEvent) => {
@@ -1031,6 +1019,7 @@ const App: React.FC = () => {
     { key: "dashboard", label: "Главная", icon: "🏠" },
     { key: "hackathon-config", label: "Конструктор", icon: "🧭" },
     { key: "profile", label: "Профиль", icon: "🎯" },
+    { key: "teams", label: "Команды", icon: "👥" },
   ];
 
   const handleAuthSubmit = (e: React.FormEvent) => {
@@ -1163,10 +1152,10 @@ const App: React.FC = () => {
             <LogoText>HACK</LogoText>
           </SidebarHeader>
           <SidebarModeSwitcher>
-            <SidebarModeButton active={mainTab === "home"} onClick={() => handleMainTabChange("home")}>
+            <SidebarModeButton active={activePage === "dashboard"} onClick={() => handleChangePage("dashboard")}>
               🏠 Home
             </SidebarModeButton>
-            <SidebarModeButton active={mainTab === "profile"} onClick={() => handleMainTabChange("profile")}>
+            <SidebarModeButton active={activePage === "profile"} onClick={() => handleChangePage("profile")}>
               👤 Profile
             </SidebarModeButton>
           </SidebarModeSwitcher>
@@ -1212,7 +1201,6 @@ const App: React.FC = () => {
           </Topbar>
 
           <Content>
-            <MainTabs activeTab={mainTab} onChange={handleMainTabChange} />
             {activePage === "dashboard" && (
               <section>
                 <SectionGrid>

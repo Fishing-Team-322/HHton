@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { css, Global, ThemeProvider } from "@emotion/react";
 import styled from "@emotion/styled";
 import type { Hackathon, HackathonTab, Page, ProfileTab, Team } from "./types";
-import { badges, certificates, hackathonsMock, initialTeams, overviewEntries, timeline, userStats } from "./mockData";
+import { badges, certificates, hackathonsMock, initialTeams, overviewEntries, userStats } from "./mockData";
 
 type HackathonFormat = "online" | "offline" | "hybrid";
 type HackathonStatus = "draft" | "published" | "archived" | string;
@@ -110,6 +110,36 @@ const LogoText = styled.div`
   font-weight: 800;
   letter-spacing: 1px;
   font-size: 18px;
+`;
+
+const SidebarModeSwitcher = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  background: ${({ theme }) => theme.colors.cardSoft};
+  border-radius: ${({ theme }) => theme.radii.card}px;
+  border: 1px solid ${({ theme }) => theme.colors.borderSoft};
+  padding: 6px;
+`;
+
+const SidebarModeButton = styled.button<{ active?: boolean }>`
+  border: none;
+  border-radius: ${({ theme }) => theme.radii.pill}px;
+  padding: 10px 0;
+  background: ${({ active, theme }) => (active ? theme.colors.accent : theme.colors.card)};
+  color: ${({ active, theme }) => (active ? "#031004" : theme.colors.textMuted)};
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  &:hover {
+    color: ${({ theme, active }) => (active ? "#031004" : theme.colors.text)};
+    border: 1px solid ${({ theme }) => theme.colors.accentSoft};
+  }
 `;
 
 const TierCard = styled.div`
@@ -472,14 +502,6 @@ const SectionTitleRow = styled.div`
   gap: 10px;
 `;
 
-const BannerCard = styled(Card)`
-  background: linear-gradient(135deg, rgba(163, 255, 18, 0.08), rgba(2, 8, 23, 0.85)),
-    ${({ theme }) => theme.colors.card};
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-`;
-
 const ProfileColumns = styled.div`
   display: grid;
   grid-template-columns: 1.2fr 1fr;
@@ -497,23 +519,32 @@ const BadgeCard = styled(Card)<{ locked?: boolean }>`
   opacity: ${({ locked }) => (locked ? 0.55 : 1)};
 `;
 
-const Timeline = styled.div`
-  display: grid;
+const ActivityList = styled.div`
+  display: flex;
+  flex-direction: column;
   gap: 12px;
 `;
 
-const TimelineItem = styled.div`
+const ActivityItem = styled.div`
   display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 10px;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
   align-items: center;
+  padding: 12px;
+  border-radius: ${({ theme }) => theme.radii.card}px;
+  background: ${({ theme }) => theme.colors.card};
+  border: 1px solid ${({ theme }) => theme.colors.borderSoft};
 `;
 
-const Dot = styled.div`
-  width: 12px;
-  height: 12px;
+const ActivityIcon = styled.div`
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: ${({ theme }) => theme.colors.accent};
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  background: ${({ theme }) => theme.colors.cardSoft};
+  border: 1px solid ${({ theme }) => theme.colors.borderSoft};
 `;
 
 const TeamGrid = styled.div`
@@ -1025,7 +1056,6 @@ const App: React.FC = () => {
   const navItems: { key: Page; label: string; icon: string }[] = [
     { key: "dashboard", label: "Главная", icon: "🏠" },
     { key: "hackathon-config", label: "Конструктор", icon: "🧭" },
-    { key: "teams", label: "Команды", icon: "👥" },
     { key: "profile", label: "Профиль", icon: "🎯" },
   ];
 
@@ -1158,6 +1188,17 @@ const App: React.FC = () => {
             <LogoMark />
             <LogoText>HACK</LogoText>
           </SidebarHeader>
+          <SidebarModeSwitcher>
+            <SidebarModeButton active={activePage === "dashboard"} onClick={() => setActivePage("dashboard")}>
+              🏠 Home
+            </SidebarModeButton>
+            <SidebarModeButton active={activePage === "profile"} onClick={() => setActivePage("profile")}>
+              👤 Profile
+            </SidebarModeButton>
+            <SidebarModeButton active={activePage === "teams"} onClick={() => setActivePage("teams")}>
+              👥 Teams
+            </SidebarModeButton>
+          </SidebarModeSwitcher>
           <TierCard>
             <TierRow>
               <div>
@@ -1204,9 +1245,9 @@ const App: React.FC = () => {
               <section>
                 <SectionGrid>
                   <ProfileCard>
-                    <BadgePill>Hacker Rank</BadgePill>
+                    <BadgePill>Профиль участника</BadgePill>
                     <ProfileName>Алексей Волков</ProfileName>
-                    <Muted>@volkov.dev · Москва</Muted>
+                    <Muted>@volkov.dev · Москва · Продуктовый аналитик</Muted>
                     <StatsRow>
                       <div>
                         <StatValue>{userStats.totalHackathons}</StatValue>
@@ -1223,14 +1264,14 @@ const App: React.FC = () => {
                     </StatsRow>
                     <div>
                       <CardHeader>
-                        <Muted>До следующего уровня</Muted>
+                        <Muted>До следующего достижения</Muted>
                         <Muted>70%</Muted>
                       </CardHeader>
                       <ProgressBar>
                         <ProgressFill percent={70} />
                       </ProgressBar>
                       <Muted style={{ marginTop: 6 }}>
-                        Продолжайте участвовать в офлайн хакатонах, чтобы улучшить средний результат.
+                        Продолжайте участвовать в хакатонах, чтобы повысить активность и открыть новые уровни.
                       </Muted>
                     </div>
                   </ProfileCard>
@@ -1238,7 +1279,7 @@ const App: React.FC = () => {
                   <Card>
                     <CardHeader>
                       <div>
-                        <Muted>Season 9 Progress</Muted>
+                        <Muted>Сезонный рейтинг</Muted>
                         <CardTitle>#7283 Bronze Tier</CardTitle>
                       </div>
                       <Pill>В процессе</Pill>
@@ -1307,19 +1348,6 @@ const App: React.FC = () => {
                     </HackathonCard>
                   ))}
                 </CardsGrid>
-
-                <SectionTitleRow style={{ marginTop: 20 }}>
-                  <CardTitle>Latest News</CardTitle>
-                  <GhostButton>View all</GhostButton>
-                </SectionTitleRow>
-                <BannerCard>
-                  <Muted>Season 9 · SEP-DEC 2025</Muted>
-                  <CardTitle>GACHA | HackTheBox Labs</CardTitle>
-                  <Muted>
-                    Explore insights and highlights from the latest gacha challenges. Earn points and unlock exclusive rewards.
-                  </Muted>
-                  <CTAButton>Подробнее</CTAButton>
-                </BannerCard>
               </section>
             )}
 
@@ -1363,40 +1391,50 @@ const App: React.FC = () => {
                   <Card>
                     <CardHeader>
                       <div>
-                        <Muted>HackTheBox Rank</Muted>
-                        <CardTitle>Hacker</CardTitle>
+                        <Muted>Статистика участия в хакатонах</Muted>
+                        <CardTitle>Активность</CardTitle>
                       </div>
-                      <Pill>Season 9</Pill>
+                      <Pill>Уровень участия</Pill>
                     </CardHeader>
                     <StatsRow>
                       <div>
-                        <Muted>Глобальный ранг</Muted>
-                        <StatValue>#950</StatValue>
+                        <Muted>Участий</Muted>
+                        <StatValue>{userStats.totalHackathons}</StatValue>
                       </div>
                       <div>
-                        <Muted>Очки</Muted>
-                        <StatValue>412</StatValue>
+                        <Muted>Побед</Muted>
+                        <StatValue>{userStats.wins}</StatValue>
+                      </div>
+                      <div>
+                        <Muted>Призовых мест</Muted>
+                        <StatValue>{userStats.podiums}</StatValue>
+                      </div>
+                      <div>
+                        <Muted>Среднее место</Muted>
+                        <StatValue>{userStats.averagePlace}</StatValue>
                       </div>
                     </StatsRow>
                     <ProgressBar style={{ marginTop: 12 }}>
                       <ProgressFill percent={62} />
                     </ProgressBar>
-                    <Muted style={{ marginTop: 6 }}>Сделайте ещё 3 участия, чтобы перейти в Silver Tier.</Muted>
+                    <Muted style={{ marginTop: 6 }}>До следующего уровня активности осталось 3 участия.</Muted>
                   </Card>
 
                   <Card>
                     <CardHeader>
                       <div>
-                        <Muted>Season badge</Muted>
-                        <CardTitle>Bronze</CardTitle>
+                        <Muted>Текущий сезон</Muted>
+                        <CardTitle>Bronze Tier</CardTitle>
                       </div>
                       <Pill>Active</Pill>
                     </CardHeader>
-                    <Muted>Ранг растёт с участием в командных и соло хакатонах. Следующий чекпоинт через 420 очков.</Muted>
+                    <Muted>
+                      Ранг растёт с участием в командных и соло хакатонах. Следующий чекпоинт через 420 очков.
+                    </Muted>
                     <ProgressBar style={{ marginTop: 12 }}>
                       <ProgressFill percent={48} />
                     </ProgressBar>
-                    <Muted style={{ marginTop: 6 }}>48% до следующего уровня</Muted>
+                    <Muted style={{ marginTop: 6 }}>48% до следующего ранга сезона</Muted>
                   </Card>
                 </ProfileColumns>
 
@@ -1418,17 +1456,33 @@ const App: React.FC = () => {
                 )}
 
                 {profileTab === "activity" && (
-                  <Timeline>
-                    {timeline.map((item) => (
-                      <TimelineItem key={item.label}>
-                        <Dot />
-                        <div>
-                          <div style={{ fontWeight: 700 }}>{item.label}</div>
-                          <Muted>{item.date}</Muted>
-                        </div>
-                      </TimelineItem>
-                    ))}
-                  </Timeline>
+                  <ActivityList>
+                    {overviewEntries.map((item, index) => {
+                      const initials = item.title
+                        .split(" ")
+                        .filter(Boolean)
+                        .map((word) => word[0])
+                        .join("")
+                        .slice(0, 2)
+                        .toUpperCase();
+
+                      return (
+                        <ActivityItem key={`${item.title}-${index}`}>
+                          <ActivityIcon>{initials}</ActivityIcon>
+                          <div>
+                            <div style={{ fontWeight: 700 }}>
+                              Участвовал в {item.title} как {item.role}
+                            </div>
+                            <Muted>
+                              {item.date} · роль: {item.role}
+                              {item.result ? ` · результат: ${item.result}` : ""}
+                            </Muted>
+                          </div>
+                          <Muted>5 days ago</Muted>
+                        </ActivityItem>
+                      );
+                    })}
+                  </ActivityList>
                 )}
 
                 {profileTab === "badges" && (

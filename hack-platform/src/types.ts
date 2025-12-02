@@ -28,4 +28,4 @@ export interface Team {
 
 export type Page = "dashboard" | "profile" | "teams" | "hackathon-config";
 export type HackathonTab = "recommended" | "inprogress" | "favorites";
-export type ProfileTab = "overview" | "activity" | "badges" | "certificates";
+export type ProfileTab = "profile" | "activity" | "badges" | "published";

@@ -1155,6 +1155,9 @@ const App: React.FC = () => {
             <SidebarModeButton active={activePage === "dashboard"} onClick={() => handleChangePage("dashboard")}>
               🏠 Home
             </SidebarModeButton>
+            <SidebarModeButton active={activePage === "teams"} onClick={() => handleChangePage("teams")}>
+              👥 Teams
+            </SidebarModeButton>
             <SidebarModeButton active={activePage === "profile"} onClick={() => handleChangePage("profile")}>
               👤 Profile
             </SidebarModeButton>
